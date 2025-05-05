@@ -184,6 +184,7 @@ library LiquidationLogic {
     IAToken collateralAToken;
     DataTypes.ReserveCache debtReserveCache;
     DataTypes.UserConfigurationMap userConfigCache;
+    DataTypes.ReserveConfigurationMap collateralReserveConfigCache;
   }
 
   /**
@@ -238,9 +239,11 @@ library LiquidationLogic {
     vars.userReserveDebt = IERC20(vars.debtReserveCache.variableDebtTokenAddress).balanceOf(
       params.user
     );
+    vars.collateralReserveConfigCache = collateralReserve.configuration;
 
     ValidationLogic.validateLiquidationCall(
       vars.userConfigCache,
+      vars.collateralReserveConfigCache,
       collateralReserve,
       debtReserve,
       DataTypes.ValidateLiquidationCallParams({
@@ -260,13 +263,13 @@ library LiquidationLogic {
     ) {
       vars.liquidationBonus = eModeCategories[params.userEModeCategory].liquidationBonus;
     } else {
-      vars.liquidationBonus = collateralReserve.configuration.getLiquidationBonus();
+      vars.liquidationBonus = vars.collateralReserveConfigCache.getLiquidationBonus();
     }
     vars.collateralAssetPrice = IPriceOracleGetter(params.priceOracle).getAssetPrice(
       params.collateralAsset
     );
     vars.debtAssetPrice = IPriceOracleGetter(params.priceOracle).getAssetPrice(params.debtAsset);
-    vars.collateralAssetUnit = 10 ** collateralReserve.configuration.getDecimals();
+    vars.collateralAssetUnit = 10 ** vars.collateralReserveConfigCache.getDecimals();
     vars.debtAssetUnit = 10 ** vars.debtReserveCache.reserveConfiguration.getDecimals();
 
     vars.userReserveDebtInBaseCurrency =
@@ -309,7 +312,7 @@ library LiquidationLogic {
       vars.liquidationProtocolFeeAmount,
       vars.collateralToLiquidateInBaseCurrency
     ) = _calculateAvailableCollateralToLiquidate(
-      collateralReserve.configuration,
+      vars.collateralReserveConfigCache,
       vars.collateralAssetPrice,
       vars.collateralAssetUnit,
       vars.debtAssetPrice,
@@ -371,7 +374,7 @@ library LiquidationLogic {
     // An asset can only be ceiled if it has no supply or if it was not a collateral previously.
     // Therefore we can be sure that no inconsistent state can be reached in which a user has multiple collaterals, with one being ceiled.
     // This allows for the implicit assumption that: if the asset was a collateral & the asset was ceiled, the user must have been in isolation.
-    if (collateralReserve.configuration.getDebtCeiling() != 0) {
+    if (vars.collateralReserveConfigCache.getDebtCeiling() != 0) {
       // IsolationModeTotalDebt only discounts `actualDebtToLiquidate`, not the fully burned amount in case of deficit creation.
       // This is by design as otherwise the debt ceiling would render ineffective if a collateral asset faces bad debt events.
       // The governance can decide the raise the ceiling to discount manifested deficit.
@@ -384,7 +387,7 @@ library LiquidationLogic {
     }
 
     if (params.receiveAToken) {
-      _liquidateATokens(reservesData, reservesList, usersConfig, collateralReserve, params, vars);
+      _liquidateATokens(reservesData, reservesList, usersConfig, collateralReserve, vars.collateralReserveConfigCache, params, vars);
     } else {
       _burnCollateralATokens(collateralReserve, params, vars);
     }
@@ -484,6 +487,7 @@ library LiquidationLogic {
     mapping(uint256 => address) storage reservesList,
     mapping(address => DataTypes.UserConfigurationMap) storage usersConfig,
     DataTypes.ReserveData storage collateralReserve,
+    DataTypes.ReserveConfigurationMap memory collateralReserveConfig,
     DataTypes.ExecuteLiquidationCallParams memory params,
     LiquidationCallLocalVars memory vars
   ) internal {
@@ -508,7 +512,7 @@ library LiquidationLogic {
           reservesData,
           reservesList,
           liquidatorConfig,
-          collateralReserve.configuration,
+          collateralReserveConfig,
           collateralReserve.aTokenAddress
         )
       ) {

@@ -378,15 +378,15 @@ library ValidationLogic {
    */
   function validateLiquidationCall(
     DataTypes.UserConfigurationMap memory userConfig,
+    DataTypes.ReserveConfigurationMap memory collateralReserveConfig,
     DataTypes.ReserveData storage collateralReserve,
     DataTypes.ReserveData storage debtReserve,
     DataTypes.ValidateLiquidationCallParams memory params
   ) internal view {
     ValidateLiquidationCallLocalVars memory vars;
 
-    (vars.collateralReserveActive, , , vars.collateralReservePaused) = collateralReserve
-      .configuration
-      .getFlags();
+    (vars.collateralReserveActive, , , vars.collateralReservePaused) =
+      collateralReserveConfig.getFlags();
 
     (vars.principalReserveActive, , , vars.principalReservePaused) = params
       .debtReserveCache
@@ -415,7 +415,7 @@ library ValidationLogic {
     );
 
     vars.isCollateralEnabled =
-      collateralReserve.configuration.getLiquidationThreshold() != 0 &&
+      collateralReserveConfig.getLiquidationThreshold() != 0 &&
       userConfig.isUsingAsCollateral(collateralReserve.id);
 
     //if collateral isn't enabled as collateral by user, it cannot be liquidated
