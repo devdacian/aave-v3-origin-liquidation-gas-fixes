@@ -389,7 +389,7 @@ library LiquidationLogic {
     }
 
     if (params.receiveAToken) {
-      _liquidateATokens(reservesData, reservesList, usersConfig, collateralReserve, params, vars);
+      _liquidateATokens(reservesData, reservesList, usersConfig, params, vars);
     } else {
       _burnCollateralATokens(collateralReserve, params, vars);
     }
@@ -480,7 +480,6 @@ library LiquidationLogic {
    * @param reservesData The state of all the reserves
    * @param reservesList The addresses of all the active reserves
    * @param usersConfig The users configuration mapping that track the supplied/borrowed assets
-   * @param collateralReserve The data of the collateral reserve
    * @param params The additional parameters needed to execute the liquidation function
    * @param vars The executeLiquidationCall() function local vars
    */
@@ -488,7 +487,6 @@ library LiquidationLogic {
     mapping(address => DataTypes.ReserveData) storage reservesData,
     mapping(uint256 => address) storage reservesList,
     mapping(address => DataTypes.UserConfigurationMap) storage usersConfig,
-    DataTypes.ReserveData storage collateralReserve,
     DataTypes.ExecuteLiquidationCallParams memory params,
     LiquidationCallLocalVars memory vars
   ) internal {
@@ -514,7 +512,7 @@ library LiquidationLogic {
           reservesList,
           liquidatorConfig,
           vars.collateralReserveConfigCache,
-          collateralReserve.aTokenAddress
+          address(vars.collateralAToken)
         )
       ) {
         liquidatorConfig.setUsingAsCollateral(vars.collateralReserveId, true);
