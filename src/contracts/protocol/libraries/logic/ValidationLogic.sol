@@ -377,7 +377,7 @@ library ValidationLogic {
    * @param params Additional parameters needed for the validation
    */
   function validateLiquidationCall(
-    DataTypes.UserConfigurationMap storage userConfig,
+    DataTypes.UserConfigurationMap memory userConfig,
     DataTypes.ReserveData storage collateralReserve,
     DataTypes.ReserveData storage debtReserve,
     DataTypes.ValidateLiquidationCallParams memory params

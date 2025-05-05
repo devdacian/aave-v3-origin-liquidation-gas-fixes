@@ -183,6 +183,7 @@ library LiquidationLogic {
     uint256 debtAssetUnit;
     IAToken collateralAToken;
     DataTypes.ReserveCache debtReserveCache;
+    DataTypes.UserConfigurationMap userConfigCache;
   }
 
   /**
@@ -209,6 +210,7 @@ library LiquidationLogic {
     DataTypes.ReserveData storage debtReserve = reservesData[params.debtAsset];
     DataTypes.UserConfigurationMap storage userConfig = usersConfig[params.user];
     vars.debtReserveCache = debtReserve.cache();
+    vars.userConfigCache = userConfig;
     debtReserve.updateState(vars.debtReserveCache);
 
     (
@@ -223,7 +225,7 @@ library LiquidationLogic {
       reservesList,
       eModeCategories,
       DataTypes.CalculateUserAccountDataParams({
-        userConfig: userConfig,
+        userConfig: vars.userConfigCache,
         reservesCount: params.reservesCount,
         user: params.user,
         oracle: params.priceOracle,
@@ -238,7 +240,7 @@ library LiquidationLogic {
     );
 
     ValidationLogic.validateLiquidationCall(
-      userConfig,
+      vars.userConfigCache,
       collateralReserve,
       debtReserve,
       DataTypes.ValidateLiquidationCallParams({
