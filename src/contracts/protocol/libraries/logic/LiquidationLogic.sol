@@ -181,6 +181,7 @@ library LiquidationLogic {
     uint256 debtAssetPrice;
     uint256 collateralAssetUnit;
     uint256 debtAssetUnit;
+    uint16 collateralReserveId;
     IAToken collateralAToken;
     DataTypes.ReserveCache debtReserveCache;
     DataTypes.UserConfigurationMap userConfigCache;
@@ -234,7 +235,7 @@ library LiquidationLogic {
       })
     );
 
-    vars.collateralAToken = IAToken(collateralReserve.aTokenAddress);
+    (vars.collateralReserveId, vars.collateralAToken) = (collateralReserve.id, IAToken(collateralReserve.aTokenAddress));
     vars.userCollateralBalance = vars.collateralAToken.balanceOf(params.user);
     vars.userReserveDebt = IERC20(vars.debtReserveCache.variableDebtTokenAddress).balanceOf(
       params.user
@@ -244,6 +245,7 @@ library LiquidationLogic {
     ValidationLogic.validateLiquidationCall(
       vars.userConfigCache,
       vars.collateralReserveConfigCache,
+      vars.collateralReserveId,
       collateralReserve,
       debtReserve,
       DataTypes.ValidateLiquidationCallParams({
@@ -258,7 +260,7 @@ library LiquidationLogic {
       params.userEModeCategory != 0 &&
       EModeConfiguration.isReserveEnabledOnBitmap(
         eModeCategories[params.userEModeCategory].collateralBitmap,
-        collateralReserve.id
+        vars.collateralReserveId
       )
     ) {
       vars.liquidationBonus = eModeCategories[params.userEModeCategory].liquidationBonus;
@@ -354,7 +356,7 @@ library LiquidationLogic {
       vars.actualCollateralToLiquidate + vars.liquidationProtocolFeeAmount ==
       vars.userCollateralBalance
     ) {
-      userConfig.setUsingAsCollateral(collateralReserve.id, false);
+      userConfig.setUsingAsCollateral(vars.collateralReserveId, false);
       emit ReserveUsedAsCollateralDisabled(params.collateralAsset, params.user);
     }
 
@@ -387,7 +389,7 @@ library LiquidationLogic {
     }
 
     if (params.receiveAToken) {
-      _liquidateATokens(reservesData, reservesList, usersConfig, collateralReserve, vars.collateralReserveConfigCache, params, vars);
+      _liquidateATokens(reservesData, reservesList, usersConfig, collateralReserve, params, vars);
     } else {
       _burnCollateralATokens(collateralReserve, params, vars);
     }
@@ -487,7 +489,6 @@ library LiquidationLogic {
     mapping(uint256 => address) storage reservesList,
     mapping(address => DataTypes.UserConfigurationMap) storage usersConfig,
     DataTypes.ReserveData storage collateralReserve,
-    DataTypes.ReserveConfigurationMap memory collateralReserveConfig,
     DataTypes.ExecuteLiquidationCallParams memory params,
     LiquidationCallLocalVars memory vars
   ) internal {
@@ -512,11 +513,11 @@ library LiquidationLogic {
           reservesData,
           reservesList,
           liquidatorConfig,
-          collateralReserveConfig,
+          vars.collateralReserveConfigCache,
           collateralReserve.aTokenAddress
         )
       ) {
-        liquidatorConfig.setUsingAsCollateral(collateralReserve.id, true);
+        liquidatorConfig.setUsingAsCollateral(vars.collateralReserveId, true);
         emit ReserveUsedAsCollateralEnabled(params.collateralAsset, msg.sender);
       }
     }

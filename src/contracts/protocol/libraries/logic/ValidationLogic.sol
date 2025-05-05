@@ -379,6 +379,7 @@ library ValidationLogic {
   function validateLiquidationCall(
     DataTypes.UserConfigurationMap memory userConfig,
     DataTypes.ReserveConfigurationMap memory collateralReserveConfig,
+    uint16 collateralReserveId,
     DataTypes.ReserveData storage collateralReserve,
     DataTypes.ReserveData storage debtReserve,
     DataTypes.ValidateLiquidationCallParams memory params
@@ -416,7 +417,7 @@ library ValidationLogic {
 
     vars.isCollateralEnabled =
       collateralReserveConfig.getLiquidationThreshold() != 0 &&
-      userConfig.isUsingAsCollateral(collateralReserve.id);
+      userConfig.isUsingAsCollateral(collateralReserveId);
 
     //if collateral isn't enabled as collateral by user, it cannot be liquidated
     require(vars.isCollateralEnabled, Errors.COLLATERAL_CANNOT_BE_LIQUIDATED);
