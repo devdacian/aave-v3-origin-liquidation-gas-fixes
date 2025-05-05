@@ -96,8 +96,9 @@ library GenericLogic {
 
       DataTypes.ReserveData storage currentReserve = reservesData[vars.currentReserveAddress];
 
-      (vars.ltv, vars.liquidationThreshold, , vars.decimals, ) = currentReserve
-        .configuration
+      DataTypes.ReserveConfigurationMap memory currentReserveConfigCache = currentReserve.configuration;
+
+      (vars.ltv, vars.liquidationThreshold, , vars.decimals, ) = currentReserveConfigCache
         .getParams();
 
       unchecked {
@@ -137,7 +138,7 @@ library GenericLogic {
       }
 
       if (params.userConfig.isBorrowing(vars.i)) {
-        if (currentReserve.configuration.getIsVirtualAccActive()) {
+        if (currentReserveConfigCache.getIsVirtualAccActive()) {
           vars.totalDebtInBaseCurrency += _getUserDebtInBaseCurrency(
             params.user,
             currentReserve,
