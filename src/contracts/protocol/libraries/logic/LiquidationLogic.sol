@@ -622,13 +622,6 @@ library LiquidationLogic {
     );
   }
 
-  struct AvailableCollateralToLiquidateLocalVars {
-    uint256 maxCollateralToLiquidate;
-    uint256 baseCollateral;
-    uint256 bonusCollateral;
-    uint256 liquidationProtocolFeePercentage;
-    uint256 collateralAssetPrice;
-  }
 
   /**
    * @notice Calculates how much of a specific collateral can be liquidated, given
@@ -658,38 +651,37 @@ library LiquidationLogic {
     uint256 userCollateralBalance,
     uint256 liquidationBonus
   ) internal pure returns (uint256 collateralAmount, uint256 debtAmountNeeded, uint256 liquidationProtocolFee, uint256 collateralToLiquidateInBaseCurrency) {
-    AvailableCollateralToLiquidateLocalVars memory vars;
-    vars.collateralAssetPrice = collateralAssetPrice;
-    vars.liquidationProtocolFeePercentage = collateralReserveConfiguration
+    uint256 collateralAssetPrice = collateralAssetPrice;
+    uint256 liquidationProtocolFeePercentage = collateralReserveConfiguration
       .getLiquidationProtocolFee();
 
     // This is the base collateral to liquidate based on the given debt to cover
-    vars.baseCollateral =
+    uint256 baseCollateral =
       ((debtAssetPrice * debtToCover * collateralAssetUnit)) /
-      (vars.collateralAssetPrice * debtAssetUnit);
+      (collateralAssetPrice * debtAssetUnit);
 
-    vars.maxCollateralToLiquidate = vars.baseCollateral.percentMul(liquidationBonus);
+    uint256 maxCollateralToLiquidate = baseCollateral.percentMul(liquidationBonus);
 
-    if (vars.maxCollateralToLiquidate > userCollateralBalance) {
+    if (maxCollateralToLiquidate > userCollateralBalance) {
       collateralAmount = userCollateralBalance;
-      debtAmountNeeded = ((vars.collateralAssetPrice * collateralAmount * debtAssetUnit) /
+      debtAmountNeeded = ((collateralAssetPrice * collateralAmount * debtAssetUnit) /
         (debtAssetPrice * collateralAssetUnit)).percentDiv(liquidationBonus);
     } else {
-      collateralAmount = vars.maxCollateralToLiquidate;
+      collateralAmount = maxCollateralToLiquidate;
       debtAmountNeeded = debtToCover;
     }
 
     collateralToLiquidateInBaseCurrency =
-      (collateralAmount * vars.collateralAssetPrice) /
+      (collateralAmount * collateralAssetPrice) /
       collateralAssetUnit;
 
-    if (vars.liquidationProtocolFeePercentage != 0) {
-      vars.bonusCollateral =
+    if (liquidationProtocolFeePercentage != 0) {
+      uint256 bonusCollateral =
         collateralAmount -
         collateralAmount.percentDiv(liquidationBonus);
 
-      liquidationProtocolFee = vars.bonusCollateral.percentMul(
-        vars.liquidationProtocolFeePercentage
+      liquidationProtocolFee = bonusCollateral.percentMul(
+        liquidationProtocolFeePercentage
       );
       collateralAmount -= liquidationProtocolFee;
     }
