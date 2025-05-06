@@ -33,15 +33,9 @@ library GenericLogic {
     uint256 ltv;
     uint256 liquidationThreshold;
     uint256 i;
-    uint256 healthFactor;
-    uint256 totalCollateralInBaseCurrency;
-    uint256 totalDebtInBaseCurrency;
-    uint256 avgLtv;
-    uint256 avgLiquidationThreshold;
     uint256 eModeLtv;
     uint256 eModeLiqThreshold;
     address currentReserveAddress;
-    bool hasZeroLtvCollateral;
     bool isInEModeCategory;
   }
 
@@ -53,19 +47,24 @@ library GenericLogic {
    * @param reservesList The addresses of all the active reserves
    * @param eModeCategories The configuration of all the efficiency mode categories
    * @param params Additional parameters needed for the calculation
-   * @return The total collateral of the user in the base currency used by the price feed
-   * @return The total debt of the user in the base currency used by the price feed
-   * @return The average ltv of the user
-   * @return The average liquidation threshold of the user
-   * @return The health factor of the user
-   * @return True if the ltv is zero, false otherwise
+   * @return totalCollateralInBaseCurrency The total collateral of the user in the base currency used by the price feed
+   * @return totalDebtInBaseCurrency The total debt of the user in the base currency used by the price feed
+   * @return avgLtv The average ltv of the user
+   * @return avgLiquidationThreshold The average liquidation threshold of the user
+   * @return healthFactor The health factor of the user
+   * @return hasZeroLtvCollateral True if the ltv is zero, false otherwise
    */
   function calculateUserAccountData(
     mapping(address => DataTypes.ReserveData) storage reservesData,
     mapping(uint256 => address) storage reservesList,
     mapping(uint8 => DataTypes.EModeCategory) storage eModeCategories,
     DataTypes.CalculateUserAccountDataParams memory params
-  ) internal view returns (uint256, uint256, uint256, uint256, uint256, bool) {
+  ) internal view returns (uint256 totalCollateralInBaseCurrency,
+                           uint256 totalDebtInBaseCurrency,
+                           uint256 avgLtv,
+                           uint256 avgLiquidationThreshold,
+                           uint256 healthFactor,
+                           bool hasZeroLtvCollateral) {
     if (params.userConfig.isEmpty()) {
       return (0, 0, 0, 0, type(uint256).max, false);
     }
@@ -115,7 +114,7 @@ library GenericLogic {
           vars.assetUnit
         );
 
-        vars.totalCollateralInBaseCurrency += vars.userBalanceInBaseCurrency;
+        totalCollateralInBaseCurrency += vars.userBalanceInBaseCurrency;
 
         vars.isInEModeCategory =
           params.userEModeCategory != 0 &&
@@ -125,21 +124,21 @@ library GenericLogic {
           );
 
         if (vars.ltv != 0) {
-          vars.avgLtv +=
+          avgLtv +=
             vars.userBalanceInBaseCurrency *
             (vars.isInEModeCategory ? vars.eModeLtv : vars.ltv);
         } else {
-          vars.hasZeroLtvCollateral = true;
+          hasZeroLtvCollateral = true;
         }
 
-        vars.avgLiquidationThreshold +=
+        avgLiquidationThreshold +=
           vars.userBalanceInBaseCurrency *
           (vars.isInEModeCategory ? vars.eModeLiqThreshold : vars.liquidationThreshold);
       }
 
       if (params.userConfig.isBorrowing(vars.i)) {
         if (currentReserveConfigCache.getIsVirtualAccActive()) {
-          vars.totalDebtInBaseCurrency += _getUserDebtInBaseCurrency(
+          totalDebtInBaseCurrency += _getUserDebtInBaseCurrency(
             params.user,
             currentReserve,
             vars.assetPrice,
@@ -147,7 +146,7 @@ library GenericLogic {
           );
         } else {
           // custom case for GHO, which applies the GHO discount on balanceOf
-          vars.totalDebtInBaseCurrency +=
+          totalDebtInBaseCurrency +=
             (IERC20(currentReserve.variableDebtTokenAddress).balanceOf(params.user) *
               vars.assetPrice) /
             vars.assetUnit;
@@ -160,27 +159,19 @@ library GenericLogic {
     }
 
     unchecked {
-      vars.avgLtv = vars.totalCollateralInBaseCurrency != 0
-        ? vars.avgLtv / vars.totalCollateralInBaseCurrency
+      avgLtv = totalCollateralInBaseCurrency != 0
+        ? avgLtv / totalCollateralInBaseCurrency
         : 0;
-      vars.avgLiquidationThreshold = vars.totalCollateralInBaseCurrency != 0
-        ? vars.avgLiquidationThreshold / vars.totalCollateralInBaseCurrency
+      avgLiquidationThreshold = totalCollateralInBaseCurrency != 0
+        ? avgLiquidationThreshold / totalCollateralInBaseCurrency
         : 0;
     }
 
-    vars.healthFactor = (vars.totalDebtInBaseCurrency == 0)
+    healthFactor = (totalDebtInBaseCurrency == 0)
       ? type(uint256).max
-      : (vars.totalCollateralInBaseCurrency.percentMul(vars.avgLiquidationThreshold)).wadDiv(
-        vars.totalDebtInBaseCurrency
+      : (totalCollateralInBaseCurrency.percentMul(avgLiquidationThreshold)).wadDiv(
+        totalDebtInBaseCurrency
       );
-    return (
-      vars.totalCollateralInBaseCurrency,
-      vars.totalDebtInBaseCurrency,
-      vars.avgLtv,
-      vars.avgLiquidationThreshold,
-      vars.healthFactor,
-      vars.hasZeroLtvCollateral
-    );
   }
 
   /**
