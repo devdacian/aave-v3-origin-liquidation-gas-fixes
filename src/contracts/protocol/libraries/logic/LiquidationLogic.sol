@@ -166,10 +166,8 @@ library LiquidationLogic {
 
   struct LiquidationCallLocalVars {
     uint256 userCollateralBalance;
-    uint256 userReserveDebt;
     uint256 actualDebtToLiquidate;
     uint256 actualCollateralToLiquidate;
-    uint256 liquidationBonus;
     uint256 healthFactor;
     uint256 liquidationProtocolFeeAmount;
     uint256 totalCollateralInBaseCurrency;
@@ -177,7 +175,6 @@ library LiquidationLogic {
     uint256 collateralToLiquidateInBaseCurrency;
     uint256 userReserveDebtInBaseCurrency;
     uint256 userReserveCollateralInBaseCurrency;
-    uint256 collateralAssetPrice;
     uint256 debtAssetPrice;
     uint256 collateralAssetUnit;
     uint256 debtAssetUnit;
@@ -240,7 +237,7 @@ library LiquidationLogic {
 
     (vars.collateralReserveId, vars.collateralAToken) = (collateralReserve.id, IAToken(collateralReserve.aTokenAddress));
     vars.userCollateralBalance = vars.collateralAToken.balanceOf(params.user);
-    vars.userReserveDebt = IERC20(vars.debtReserveCache.variableDebtTokenAddress).balanceOf(
+    uint256 userReserveDebt = IERC20(vars.debtReserveCache.variableDebtTokenAddress).balanceOf(
       params.user
     );
     vars.collateralReserveConfigCache = collateralReserve.configuration;
@@ -253,12 +250,13 @@ library LiquidationLogic {
       debtReserve,
       DataTypes.ValidateLiquidationCallParams({
         debtReserveCache: vars.debtReserveCache,
-        totalDebt: vars.userReserveDebt,
+        totalDebt: userReserveDebt,
         healthFactor: vars.healthFactor,
         priceOracleSentinel: params.priceOracleSentinel
       })
     );
 
+    uint256 liquidationBonus;
     if (
       params.userEModeCategory != 0 &&
       EModeConfiguration.isReserveEnabledOnBitmap(
@@ -266,11 +264,11 @@ library LiquidationLogic {
         vars.collateralReserveId
       )
     ) {
-      vars.liquidationBonus = eModeCategories[params.userEModeCategory].liquidationBonus;
+      liquidationBonus = eModeCategories[params.userEModeCategory].liquidationBonus;
     } else {
-      vars.liquidationBonus = vars.collateralReserveConfigCache.getLiquidationBonus();
+      liquidationBonus = vars.collateralReserveConfigCache.getLiquidationBonus();
     }
-    vars.collateralAssetPrice = IPriceOracleGetter(params.priceOracle).getAssetPrice(
+    uint256 collateralAssetPrice = IPriceOracleGetter(params.priceOracle).getAssetPrice(
       params.collateralAsset
     );
     vars.debtAssetPrice = IPriceOracleGetter(params.priceOracle).getAssetPrice(params.debtAsset);
@@ -278,15 +276,15 @@ library LiquidationLogic {
     vars.debtAssetUnit = 10 ** vars.debtReserveCache.reserveConfiguration.getDecimals();
 
     vars.userReserveDebtInBaseCurrency =
-      (vars.userReserveDebt * vars.debtAssetPrice) /
+      (userReserveDebt * vars.debtAssetPrice) /
       vars.debtAssetUnit;
 
     vars.userReserveCollateralInBaseCurrency =
-      (vars.userCollateralBalance * vars.collateralAssetPrice) /
+      (vars.userCollateralBalance * collateralAssetPrice) /
       vars.collateralAssetUnit;
 
     // by default whole debt in the reserve could be liquidated
-    uint256 maxLiquidatableDebt = vars.userReserveDebt;
+    uint256 maxLiquidatableDebt = userReserveDebt;
     // but if debt and collateral is above or equal MIN_BASE_MAX_CLOSE_FACTOR_THRESHOLD
     // and health factor is above CLOSE_FACTOR_HF_THRESHOLD this amount may be adjusted
     if (
@@ -318,13 +316,13 @@ library LiquidationLogic {
       vars.collateralToLiquidateInBaseCurrency
     ) = _calculateAvailableCollateralToLiquidate(
       vars.collateralReserveConfigCache,
-      vars.collateralAssetPrice,
+      collateralAssetPrice,
       vars.collateralAssetUnit,
       vars.debtAssetPrice,
       vars.debtAssetUnit,
       vars.actualDebtToLiquidate,
       vars.userCollateralBalance,
-      vars.liquidationBonus
+      liquidationBonus
     );
 
     // to prevent accumulation of dust on the protocol, it is enforced that you either
@@ -332,18 +330,18 @@ library LiquidationLogic {
     // 2. liquidate all collateral
     // 3. leave more than MIN_LEFTOVER_BASE of collateral & debt
     if (
-      vars.actualDebtToLiquidate < vars.userReserveDebt &&
+      vars.actualDebtToLiquidate < userReserveDebt &&
       vars.actualCollateralToLiquidate + vars.liquidationProtocolFeeAmount <
       vars.userCollateralBalance
     ) {
-      bool isDebtMoreThanLeftoverThreshold = ((vars.userReserveDebt - vars.actualDebtToLiquidate) *
+      bool isDebtMoreThanLeftoverThreshold = ((userReserveDebt - vars.actualDebtToLiquidate) *
         vars.debtAssetPrice) /
         vars.debtAssetUnit >=
         MIN_LEFTOVER_BASE;
 
       bool isCollateralMoreThanLeftoverThreshold = ((vars.userCollateralBalance -
         vars.actualCollateralToLiquidate -
-        vars.liquidationProtocolFeeAmount) * vars.collateralAssetPrice) /
+        vars.liquidationProtocolFeeAmount) * collateralAssetPrice) /
         vars.collateralAssetUnit >=
         MIN_LEFTOVER_BASE;
 
@@ -371,7 +369,7 @@ library LiquidationLogic {
       vars.userConfigCache, // may be modified
       params.user,
       params.debtAsset,
-      vars.userReserveDebt,
+      userReserveDebt,
       vars.actualDebtToLiquidate,
       hasNoCollateralLeft
     );
