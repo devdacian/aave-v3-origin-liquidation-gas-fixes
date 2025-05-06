@@ -28,7 +28,6 @@ library GenericLogic {
   struct CalculateUserAccountDataVars {
     uint256 assetPrice;
     uint256 assetUnit;
-    uint256 userBalanceInBaseCurrency;
     uint256 decimals;
     uint256 ltv;
     uint256 liquidationThreshold;
@@ -92,14 +91,14 @@ library GenericLogic {
       vars.assetPrice = IPriceOracleGetter(params.oracle).getAssetPrice(vars.currentReserveAddress);
 
       if (vars.liquidationThreshold != 0 && params.userConfig.isUsingAsCollateral(i)) {
-        vars.userBalanceInBaseCurrency = _getUserBalanceInBaseCurrency(
+        uint256 userBalanceInBaseCurrency = _getUserBalanceInBaseCurrency(
           params.user,
           currentReserve,
           vars.assetPrice,
           vars.assetUnit
         );
 
-        totalCollateralInBaseCurrency += vars.userBalanceInBaseCurrency;
+        totalCollateralInBaseCurrency += userBalanceInBaseCurrency;
 
         bool isInEModeCategory =
           params.userEModeCategory != 0 &&
@@ -110,14 +109,14 @@ library GenericLogic {
 
         if (vars.ltv != 0) {
           avgLtv +=
-            vars.userBalanceInBaseCurrency *
+            userBalanceInBaseCurrency *
             (isInEModeCategory ? eModeCategories[params.userEModeCategory].ltv : vars.ltv);
         } else {
           hasZeroLtvCollateral = true;
         }
 
         avgLiquidationThreshold +=
-          vars.userBalanceInBaseCurrency *
+          userBalanceInBaseCurrency *
           (isInEModeCategory ? eModeCategories[params.userEModeCategory].liquidationThreshold : vars.liquidationThreshold);
       }
 
