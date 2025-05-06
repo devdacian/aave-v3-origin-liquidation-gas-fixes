@@ -160,21 +160,20 @@ library GenericLogic {
    * @param totalCollateralInBaseCurrency The total collateral in the base currency used by the price feed
    * @param totalDebtInBaseCurrency The total borrow balance in the base currency used by the price feed
    * @param ltv The average loan to value
-   * @return The amount available to borrow in the base currency of the used by the price feed
+   * @return availableBorrowsInBaseCurrency The amount available to borrow in the base currency of the used by the price feed
    */
   function calculateAvailableBorrows(
     uint256 totalCollateralInBaseCurrency,
     uint256 totalDebtInBaseCurrency,
     uint256 ltv
-  ) internal pure returns (uint256) {
-    uint256 availableBorrowsInBaseCurrency = totalCollateralInBaseCurrency.percentMul(ltv);
+  ) internal pure returns (uint256 availableBorrowsInBaseCurrency) {
+    availableBorrowsInBaseCurrency = totalCollateralInBaseCurrency.percentMul(ltv);
 
     if (availableBorrowsInBaseCurrency <= totalDebtInBaseCurrency) {
       return 0;
     }
 
     availableBorrowsInBaseCurrency = availableBorrowsInBaseCurrency - totalDebtInBaseCurrency;
-    return availableBorrowsInBaseCurrency;
   }
 
   /**

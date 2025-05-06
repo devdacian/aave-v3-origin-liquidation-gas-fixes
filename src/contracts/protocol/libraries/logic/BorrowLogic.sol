@@ -149,14 +149,14 @@ library BorrowLogic {
    * @param reservesList The addresses of all the active reserves
    * @param userConfig The user configuration mapping that tracks the supplied/borrowed assets
    * @param params The additional parameters needed to execute the repay function
-   * @return The actual amount being repaid
+   * @return paybackAmount The actual amount being repaid
    */
   function executeRepay(
     mapping(address => DataTypes.ReserveData) storage reservesData,
     mapping(uint256 => address) storage reservesList,
     DataTypes.UserConfigurationMap storage userConfig,
     DataTypes.ExecuteRepayParams memory params
-  ) external returns (uint256) {
+  ) external returns (uint256 paybackAmount) {
     DataTypes.ReserveData storage reserve = reservesData[params.asset];
     DataTypes.ReserveCache memory reserveCache = reserve.cache();
     reserve.updateState(reserveCache);
@@ -173,7 +173,7 @@ library BorrowLogic {
       variableDebt
     );
 
-    uint256 paybackAmount = variableDebt;
+    paybackAmount = variableDebt;
 
     // Allows a user to repay with aTokens without leaving dust from interest.
     if (params.useATokens && params.amount == type(uint256).max) {
@@ -229,7 +229,5 @@ library BorrowLogic {
     }
 
     emit Repay(params.asset, params.onBehalfOf, msg.sender, paybackAmount, params.useATokens);
-
-    return paybackAmount;
   }
 }

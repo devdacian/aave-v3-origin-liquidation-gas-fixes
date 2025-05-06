@@ -437,10 +437,8 @@ abstract contract Pool is VersionedInitializable, PoolStorage, IPool {
   /// @inheritdoc IPool
   function getReserveData(
     address asset
-  ) external view virtual override returns (DataTypes.ReserveDataLegacy memory) {
+  ) external view virtual override returns (DataTypes.ReserveDataLegacy memory res) {
     DataTypes.ReserveData storage reserve = _reserves[asset];
-    DataTypes.ReserveDataLegacy memory res;
-
     res.configuration = reserve.configuration;
     res.liquidityIndex = reserve.liquidityIndex;
     res.currentLiquidityRate = reserve.currentLiquidityRate;
@@ -458,7 +456,6 @@ abstract contract Pool is VersionedInitializable, PoolStorage, IPool {
     // While the new pool data provider is backward compatible, some integrations hard-code an old implementation
     // To allow them to not have any infrastructural blocker, a mock must be configured in the Aave Pool Addresses Provider, returning zero on all required view methods, instead of reverting
     res.stableDebtTokenAddress = ADDRESSES_PROVIDER.getAddress(bytes32('MOCK_STABLE_DEBT'));
-    return res;
   }
 
   /// @inheritdoc IPool
@@ -503,15 +500,15 @@ abstract contract Pool is VersionedInitializable, PoolStorage, IPool {
   /// @inheritdoc IPool
   function getConfiguration(
     address asset
-  ) external view virtual override returns (DataTypes.ReserveConfigurationMap memory) {
-    return _reserves[asset].configuration;
+  ) external view virtual override returns (DataTypes.ReserveConfigurationMap memory config) {
+    config = _reserves[asset].configuration;
   }
 
   /// @inheritdoc IPool
   function getUserConfiguration(
     address user
-  ) external view virtual override returns (DataTypes.UserConfigurationMap memory) {
-    return _usersConfig[user];
+  ) external view virtual override returns (DataTypes.UserConfigurationMap memory config) {
+    config = _usersConfig[user];
   }
 
   /// @inheritdoc IPool
@@ -529,10 +526,10 @@ abstract contract Pool is VersionedInitializable, PoolStorage, IPool {
   }
 
   /// @inheritdoc IPool
-  function getReservesList() external view virtual override returns (address[] memory) {
+  function getReservesList() external view virtual override returns (address[] memory reservesList) {
     uint256 reservesListCount = _reservesCount;
-    uint256 droppedReservesCount = 0;
-    address[] memory reservesList = new address[](reservesListCount);
+    uint256 droppedReservesCount;
+    reservesList = new address[](reservesListCount);
 
     for (uint256 i = 0; i < reservesListCount; i++) {
       if (_reservesList[i] != address(0)) {
@@ -546,7 +543,6 @@ abstract contract Pool is VersionedInitializable, PoolStorage, IPool {
     assembly {
       mstore(reservesList, sub(reservesListCount, droppedReservesCount))
     }
-    return reservesList;
   }
 
   /// @inheritdoc IPool
@@ -727,9 +723,9 @@ abstract contract Pool is VersionedInitializable, PoolStorage, IPool {
   /// @inheritdoc IPool
   function getEModeCategoryData(
     uint8 id
-  ) external view virtual override returns (DataTypes.EModeCategoryLegacy memory) {
+  ) external view virtual override returns (DataTypes.EModeCategoryLegacy memory data) {
     DataTypes.EModeCategory storage category = _eModeCategories[id];
-    return
+    data =
       DataTypes.EModeCategoryLegacy({
         ltv: category.ltv,
         liquidationThreshold: category.liquidationThreshold,
@@ -742,8 +738,8 @@ abstract contract Pool is VersionedInitializable, PoolStorage, IPool {
   /// @inheritdoc IPool
   function getEModeCategoryCollateralConfig(
     uint8 id
-  ) external view returns (DataTypes.CollateralConfig memory) {
-    return
+  ) external view returns (DataTypes.CollateralConfig memory config) {
+    config =
       DataTypes.CollateralConfig({
         ltv: _eModeCategories[id].ltv,
         liquidationThreshold: _eModeCategories[id].liquidationThreshold,
@@ -752,8 +748,8 @@ abstract contract Pool is VersionedInitializable, PoolStorage, IPool {
   }
 
   /// @inheritdoc IPool
-  function getEModeCategoryLabel(uint8 id) external view returns (string memory) {
-    return _eModeCategories[id].label;
+  function getEModeCategoryLabel(uint8 id) external view returns (string memory label) {
+    label = _eModeCategories[id].label;
   }
 
   /// @inheritdoc IPool

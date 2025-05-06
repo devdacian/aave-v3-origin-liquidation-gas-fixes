@@ -248,21 +248,19 @@ library UserConfiguration {
   /**
    * @notice Returns the address of the first asset flagged in the bitmap given the corresponding bitmask
    * @param self The configuration object
-   * @return The index of the first asset flagged in the bitmap once the corresponding mask is applied
+   * @return id The index of the first asset flagged in the bitmap once the corresponding mask is applied
    */
   function _getFirstAssetIdByMask(
     DataTypes.UserConfigurationMap memory self,
     uint256 mask
-  ) internal pure returns (uint256) {
+  ) internal pure returns (uint256 id) {
     unchecked {
       uint256 bitmapData = self.data & mask;
       uint256 firstAssetPosition = bitmapData & ~(bitmapData - 1);
-      uint256 id;
 
       while ((firstAssetPosition >>= 2) != 0) {
         id += 1;
       }
-      return id;
     }
   }
 }
