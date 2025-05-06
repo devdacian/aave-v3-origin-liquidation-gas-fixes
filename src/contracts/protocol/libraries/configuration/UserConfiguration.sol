@@ -39,6 +39,22 @@ library UserConfiguration {
       }
     }
   }
+  // a version of the previous function that modifies user config in memory
+  function setBorrowingInMemory(
+    DataTypes.UserConfigurationMap memory self,
+    uint256 reserveIndex,
+    bool borrowing
+  ) internal pure {
+    unchecked {
+      require(reserveIndex < ReserveConfiguration.MAX_RESERVES_COUNT, Errors.INVALID_RESERVE_INDEX);
+      uint256 bit = 1 << (reserveIndex << 1);
+      if (borrowing) {
+        self.data |= bit;
+      } else {
+        self.data &= ~bit;
+      }
+    }
+  }
 
   /**
    * @notice Sets if the user is using as collateral the reserve identified by reserveIndex
@@ -51,6 +67,22 @@ library UserConfiguration {
     uint256 reserveIndex,
     bool usingAsCollateral
   ) internal {
+    unchecked {
+      require(reserveIndex < ReserveConfiguration.MAX_RESERVES_COUNT, Errors.INVALID_RESERVE_INDEX);
+      uint256 bit = 1 << ((reserveIndex << 1) + 1);
+      if (usingAsCollateral) {
+        self.data |= bit;
+      } else {
+        self.data &= ~bit;
+      }
+    }
+  }
+  // a version of the previous function that modifies user config in memory
+  function setUsingAsCollateralInMemory(
+    DataTypes.UserConfigurationMap memory self,
+    uint256 reserveIndex,
+    bool usingAsCollateral
+  ) internal pure {
     unchecked {
       require(reserveIndex < ReserveConfiguration.MAX_RESERVES_COUNT, Errors.INVALID_RESERVE_INDEX);
       uint256 bit = 1 << ((reserveIndex << 1) + 1);

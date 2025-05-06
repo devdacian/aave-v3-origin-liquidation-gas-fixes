@@ -593,7 +593,7 @@ library ValidationLogic {
   function validateUseAsCollateral(
     mapping(address => DataTypes.ReserveData) storage reservesData,
     mapping(uint256 => address) storage reservesList,
-    DataTypes.UserConfigurationMap storage userConfig,
+    DataTypes.UserConfigurationMap memory userConfig,
     DataTypes.ReserveConfigurationMap memory reserveConfig
   ) internal view returns (bool) {
     if (reserveConfig.getLtv() == 0) {
@@ -620,7 +620,7 @@ library ValidationLogic {
   function validateAutomaticUseAsCollateral(
     mapping(address => DataTypes.ReserveData) storage reservesData,
     mapping(uint256 => address) storage reservesList,
-    DataTypes.UserConfigurationMap storage userConfig,
+    DataTypes.UserConfigurationMap memory userConfig,
     DataTypes.ReserveConfigurationMap memory reserveConfig,
     address aTokenAddress
   ) internal view returns (bool) {

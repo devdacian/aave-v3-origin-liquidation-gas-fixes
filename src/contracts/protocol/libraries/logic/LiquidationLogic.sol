@@ -210,9 +210,12 @@ library LiquidationLogic {
 
     DataTypes.ReserveData storage collateralReserve = reservesData[params.collateralAsset];
     DataTypes.ReserveData storage debtReserve = reservesData[params.debtAsset];
-    DataTypes.UserConfigurationMap storage userConfig = usersConfig[params.user];
     vars.debtReserveCache = debtReserve.cache();
-    vars.userConfigCache = userConfig;
+
+    // read user's configuration once from storage; this cached copy will be used
+    // and updated by all liquidation operations, then written to storage once at
+    // the end ensuring only 1 read/write from/to storage
+    vars.userConfigCache = usersConfig[params.user];
     debtReserve.updateState(vars.debtReserveCache);
 
     (
@@ -356,7 +359,7 @@ library LiquidationLogic {
       vars.actualCollateralToLiquidate + vars.liquidationProtocolFeeAmount ==
       vars.userCollateralBalance
     ) {
-      userConfig.setUsingAsCollateral(vars.collateralReserveId, false);
+      vars.userConfigCache.setUsingAsCollateralInMemory(vars.collateralReserveId, false);
       emit ReserveUsedAsCollateralDisabled(params.collateralAsset, params.user);
     }
 
@@ -365,7 +368,7 @@ library LiquidationLogic {
     _burnDebtTokens(
       vars.debtReserveCache,
       debtReserve,
-      userConfig,
+      vars.userConfigCache, // may be modified
       params.user,
       params.debtAsset,
       vars.userReserveDebt,
@@ -389,7 +392,7 @@ library LiquidationLogic {
     }
 
     if (params.receiveAToken) {
-      _liquidateATokens(reservesData, reservesList, usersConfig, params, vars);
+      _liquidateATokens(reservesData, reservesList, usersConfig[msg.sender], params, vars);
     } else {
       _burnCollateralATokens(collateralReserve, params, vars);
     }
@@ -415,8 +418,12 @@ library LiquidationLogic {
     // burn bad debt if necessary
     // Each additional debt asset already adds around ~75k gas to the liquidation.
     // To keep the liquidation gas under control, 0 usd collateral positions are not touched, as there is no immediate benefit in burning or transferring to treasury.
-    if (hasNoCollateralLeft && userConfig.isBorrowingAny()) {
-      _burnBadDebt(reservesData, reservesList, userConfig, params.reservesCount, params.user);
+    if (hasNoCollateralLeft && vars.userConfigCache.isBorrowingAny()) {
+      _burnBadDebt(reservesData,
+                   reservesList,
+                   vars.userConfigCache, // may be modified
+                   params.reservesCount,
+                   params.user);
     }
 
     // Transfers the debt asset being repaid to the aToken, where the liquidity is kept
@@ -441,6 +448,10 @@ library LiquidationLogic {
       msg.sender,
       params.receiveAToken
     );
+
+    // update user's configuration from cache; cached version was used
+    // and modified throughout the liquidation operation
+    usersConfig[params.user] = vars.userConfigCache;
   }
 
   /**
@@ -479,14 +490,14 @@ library LiquidationLogic {
    *        as in standard transfers if the isolation mode constraints are respected.
    * @param reservesData The state of all the reserves
    * @param reservesList The addresses of all the active reserves
-   * @param usersConfig The users configuration mapping that track the supplied/borrowed assets
+   * @param liquidatorConfig The liquidator's configuration mapping that tracks supplied/borrowed assets
    * @param params The additional parameters needed to execute the liquidation function
    * @param vars The executeLiquidationCall() function local vars
    */
   function _liquidateATokens(
     mapping(address => DataTypes.ReserveData) storage reservesData,
     mapping(uint256 => address) storage reservesList,
-    mapping(address => DataTypes.UserConfigurationMap) storage usersConfig,
+    DataTypes.UserConfigurationMap storage liquidatorConfig,
     DataTypes.ExecuteLiquidationCallParams memory params,
     LiquidationCallLocalVars memory vars
   ) internal {
@@ -497,29 +508,35 @@ library LiquidationLogic {
       vars.actualCollateralToLiquidate
     );
 
+    bool isSelfLiquidation = msg.sender == params.user;
+
     if (
       liquidatorPreviousATokenBalance == 0 ||
       // For the special case of msg.sender == params.user (self-liquidation) the liquidatorPreviousATokenBalance
       // will not yet be 0, but the liquidation will result in collateral being fully liquidated and then resupplied.
-      (msg.sender == params.user &&
+      (isSelfLiquidation &&
         vars.actualCollateralToLiquidate + vars.liquidationProtocolFeeAmount ==
         vars.userCollateralBalance)
     ) {
-      DataTypes.UserConfigurationMap storage liquidatorConfig = usersConfig[msg.sender];
       if (
         ValidationLogic.validateAutomaticUseAsCollateral(
           reservesData,
           reservesList,
-          liquidatorConfig,
+          // self-liquidation? use cached config, otherwise read liquidator config
+          isSelfLiquidation ? vars.userConfigCache : liquidatorConfig,
           vars.collateralReserveConfigCache,
           address(vars.collateralAToken)
         )
       ) {
-        liquidatorConfig.setUsingAsCollateral(vars.collateralReserveId, true);
+        // self-liquidation? update cached config, otherwise update liquidator config
+        if(isSelfLiquidation) vars.userConfigCache.setUsingAsCollateralInMemory(vars.collateralReserveId, true);
+        else liquidatorConfig.setUsingAsCollateral(vars.collateralReserveId, true);
+
         emit ReserveUsedAsCollateralEnabled(params.collateralAsset, msg.sender);
       }
     }
   }
+
 
   /**
    * @notice Burns the debt tokens of the user up to the amount being repaid by the liquidator
@@ -527,7 +544,7 @@ library LiquidationLogic {
    * @dev The function alters the `debtReserveCache` state in `vars` to update the debt related data.
    * @param debtReserveCache The cached debt reserve parameters
    * @param debtReserve The storage pointer of the debt reserve parameters
-   * @param userConfig The pointer of the user configuration
+   * @param userConfig Memory reference of the user configuration; may be modified
    * @param user The user address
    * @param debtAsset The debt asset address
    * @param actualDebtToLiquidate The actual debt to liquidate
@@ -536,7 +553,7 @@ library LiquidationLogic {
   function _burnDebtTokens(
     DataTypes.ReserveCache memory debtReserveCache,
     DataTypes.ReserveData storage debtReserve,
-    DataTypes.UserConfigurationMap storage userConfig,
+    DataTypes.UserConfigurationMap memory userConfig, // may be modified
     address user,
     address debtAsset,
     uint256 userReserveDebt,
@@ -594,7 +611,7 @@ library LiquidationLogic {
     }
 
     if (outstandingDebt == 0) {
-      userConfig.setBorrowing(debtReserve.id, false);
+      userConfig.setBorrowingInMemory(debtReserve.id, false);
     }
 
     debtReserve.updateInterestRatesAndVirtualBalance(
@@ -701,7 +718,7 @@ library LiquidationLogic {
   function _burnBadDebt(
     mapping(address => DataTypes.ReserveData) storage reservesData,
     mapping(uint256 => address) storage reservesList,
-    DataTypes.UserConfigurationMap storage userConfig,
+    DataTypes.UserConfigurationMap memory userConfig,
     uint256 reservesCount,
     address user
   ) internal {
@@ -724,7 +741,7 @@ library LiquidationLogic {
       _burnDebtTokens(
         reserveCache,
         currentReserve,
-        userConfig,
+        userConfig, // may be modified
         user,
         reserveAddress,
         IERC20(reserveCache.variableDebtTokenAddress).balanceOf(user),
