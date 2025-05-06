@@ -195,19 +195,19 @@ library SupplyLogic {
 
     ValidationLogic.validateTransfer(reserve);
 
-    uint256 reserveId = reserve.id;
     uint256 scaledAmount = params.amount.rayDiv(reserve.getNormalizedIncome());
 
     if (params.from != params.to && scaledAmount != 0) {
-      DataTypes.UserConfigurationMap storage fromConfig = usersConfig[params.from];
+      uint256 reserveId = reserve.id;
+      DataTypes.UserConfigurationMap memory fromConfigCache = usersConfig[params.from];
 
-      if (fromConfig.isUsingAsCollateral(reserveId)) {
-        if (fromConfig.isBorrowingAny()) {
+      if (fromConfigCache.isUsingAsCollateral(reserveId)) {
+        if (fromConfigCache.isBorrowingAny()) {
           ValidationLogic.validateHFAndLtv(
             reservesData,
             reservesList,
             eModeCategories,
-            usersConfig[params.from],
+            fromConfigCache,
             params.asset,
             params.from,
             params.reservesCount,
@@ -216,7 +216,7 @@ library SupplyLogic {
           );
         }
         if (params.balanceFromBefore == params.amount) {
-          fromConfig.setUsingAsCollateral(reserveId, false);
+          usersConfig[params.from].setUsingAsCollateral(reserveId, false);
           emit ReserveUsedAsCollateralDisabled(params.asset, params.from);
         }
       }
