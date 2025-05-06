@@ -69,11 +69,13 @@ library BorrowLogic {
 
     reserve.updateState(reserveCache);
 
+    DataTypes.UserConfigurationMap memory userConfigCache = userConfig;
+
     (
       bool isolationModeActive,
       address isolationModeCollateralAddress,
       uint256 isolationModeDebtCeiling
-    ) = userConfig.getIsolationModeState(reservesData, reservesList);
+    ) = userConfigCache.getIsolationModeState(reservesData, reservesList);
 
     ValidationLogic.validateBorrow(
       reservesData,
@@ -81,7 +83,7 @@ library BorrowLogic {
       eModeCategories,
       DataTypes.ValidateBorrowParams({
         reserveCache: reserveCache,
-        userConfig: userConfig,
+        userConfig: userConfigCache,
         asset: params.asset,
         userAddress: params.onBehalfOf,
         amount: params.amount,
@@ -96,7 +98,7 @@ library BorrowLogic {
       })
     );
 
-    bool isFirstBorrowing = false;
+    bool isFirstBorrowing;
 
     (isFirstBorrowing, reserveCache.nextScaledVariableDebt) = IVariableDebtToken(
       reserveCache.variableDebtTokenAddress
@@ -104,6 +106,8 @@ library BorrowLogic {
 
     if (isFirstBorrowing) {
       userConfig.setBorrowing(reserve.id, true);
+      // note: userConfigCache is stale after this point as it is never used
+      // after this, so we update its storage here
     }
 
     if (isolationModeActive) {
