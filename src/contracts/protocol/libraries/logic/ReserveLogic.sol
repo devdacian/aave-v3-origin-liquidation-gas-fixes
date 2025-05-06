@@ -113,20 +113,19 @@ library ReserveLogic {
    * @param reserve The reserve object
    * @param totalLiquidity The total liquidity available in the reserve
    * @param amount The amount to accumulate
-   * @return The next liquidity index of the reserve
+   * @return result The next liquidity index of the reserve
    */
   function cumulateToLiquidityIndex(
     DataTypes.ReserveData storage reserve,
     uint256 totalLiquidity,
     uint256 amount
-  ) internal returns (uint256) {
+  ) internal returns (uint256 result) {
     //next liquidity index is calculated this way: `((amount / totalLiquidity) + 1) * liquidityIndex`
     //division `amount / totalLiquidity` done in ray for precision
-    uint256 result = (amount.wadToRay().rayDiv(totalLiquidity.wadToRay()) + WadRayMath.RAY).rayMul(
+    result = (amount.wadToRay().rayDiv(totalLiquidity.wadToRay()) + WadRayMath.RAY).rayMul(
       reserve.liquidityIndex
     );
     reserve.liquidityIndex = result.toUint128();
-    return result;
   }
 
   /**
@@ -285,13 +284,11 @@ library ReserveLogic {
    * @notice Creates a cache object to avoid repeated storage reads and external contract calls when updating state and
    * interest rates.
    * @param reserve The reserve object for which the cache will be filled
-   * @return The cache object
+   * @return reserveCache The cache object
    */
   function cache(
     DataTypes.ReserveData storage reserve
-  ) internal view returns (DataTypes.ReserveCache memory) {
-    DataTypes.ReserveCache memory reserveCache;
-
+  ) internal view returns (DataTypes.ReserveCache memory reserveCache) {
     reserveCache.reserveConfiguration = reserve.configuration;
     reserveCache.reserveFactor = reserveCache.reserveConfiguration.getReserveFactor();
     reserveCache.currLiquidityIndex = reserveCache.nextLiquidityIndex = reserve.liquidityIndex;
@@ -308,7 +305,5 @@ library ReserveLogic {
     reserveCache.currScaledVariableDebt = reserveCache.nextScaledVariableDebt = IVariableDebtToken(
       reserveCache.variableDebtTokenAddress
     ).scaledTotalSupply();
-
-    return reserveCache;
   }
 }
