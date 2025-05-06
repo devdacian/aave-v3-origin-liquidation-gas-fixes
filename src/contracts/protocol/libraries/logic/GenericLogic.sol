@@ -32,11 +32,7 @@ library GenericLogic {
     uint256 decimals;
     uint256 ltv;
     uint256 liquidationThreshold;
-    uint256 i;
-    uint256 eModeLtv;
-    uint256 eModeLiqThreshold;
     address currentReserveAddress;
-    bool isInEModeCategory;
   }
 
   /**
@@ -71,25 +67,14 @@ library GenericLogic {
 
     CalculateUserAccountDataVars memory vars;
 
-    if (params.userEModeCategory != 0) {
-      vars.eModeLtv = eModeCategories[params.userEModeCategory].ltv;
-      vars.eModeLiqThreshold = eModeCategories[params.userEModeCategory].liquidationThreshold;
-    }
-
-    while (vars.i < params.reservesCount) {
-      if (!params.userConfig.isUsingAsCollateralOrBorrowing(vars.i)) {
-        unchecked {
-          ++vars.i;
-        }
+    for(uint256 i; i<params.reservesCount; i++) {
+      if (!params.userConfig.isUsingAsCollateralOrBorrowing(i)) {
         continue;
       }
 
-      vars.currentReserveAddress = reservesList[vars.i];
+      vars.currentReserveAddress = reservesList[i];
 
       if (vars.currentReserveAddress == address(0)) {
-        unchecked {
-          ++vars.i;
-        }
         continue;
       }
 
@@ -106,7 +91,7 @@ library GenericLogic {
 
       vars.assetPrice = IPriceOracleGetter(params.oracle).getAssetPrice(vars.currentReserveAddress);
 
-      if (vars.liquidationThreshold != 0 && params.userConfig.isUsingAsCollateral(vars.i)) {
+      if (vars.liquidationThreshold != 0 && params.userConfig.isUsingAsCollateral(i)) {
         vars.userBalanceInBaseCurrency = _getUserBalanceInBaseCurrency(
           params.user,
           currentReserve,
@@ -116,27 +101,27 @@ library GenericLogic {
 
         totalCollateralInBaseCurrency += vars.userBalanceInBaseCurrency;
 
-        vars.isInEModeCategory =
+        bool isInEModeCategory =
           params.userEModeCategory != 0 &&
           EModeConfiguration.isReserveEnabledOnBitmap(
             eModeCategories[params.userEModeCategory].collateralBitmap,
-            vars.i
+            i
           );
 
         if (vars.ltv != 0) {
           avgLtv +=
             vars.userBalanceInBaseCurrency *
-            (vars.isInEModeCategory ? vars.eModeLtv : vars.ltv);
+            (isInEModeCategory ? eModeCategories[params.userEModeCategory].ltv : vars.ltv);
         } else {
           hasZeroLtvCollateral = true;
         }
 
         avgLiquidationThreshold +=
           vars.userBalanceInBaseCurrency *
-          (vars.isInEModeCategory ? vars.eModeLiqThreshold : vars.liquidationThreshold);
+          (isInEModeCategory ? eModeCategories[params.userEModeCategory].liquidationThreshold : vars.liquidationThreshold);
       }
 
-      if (params.userConfig.isBorrowing(vars.i)) {
+      if (params.userConfig.isBorrowing(i)) {
         if (currentReserveConfigCache.getIsVirtualAccActive()) {
           totalDebtInBaseCurrency += _getUserDebtInBaseCurrency(
             params.user,
@@ -151,10 +136,6 @@ library GenericLogic {
               vars.assetPrice) /
             vars.assetUnit;
         }
-      }
-
-      unchecked {
-        ++vars.i;
       }
     }
 

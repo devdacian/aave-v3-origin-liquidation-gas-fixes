@@ -5,10 +5,10 @@
   "getReserveData": "32157",
   "getUserAccountData: supplies: 0, borrows: 0": "22641",
   "getUserAccountData: supplies: 0, borrows: 0 with eMode enabled": "22641",
-  "getUserAccountData: supplies: 1, borrows: 0": "58192",
-  "getUserAccountData: supplies: 1, borrows: 0 with eMode enabled": "60999",
-  "getUserAccountData: supplies: 2, borrows: 0": "87152",
-  "getUserAccountData: supplies: 2, borrows: 0 with eMode enabled": "90344",
-  "getUserAccountData: supplies: 2, borrows: 1": "118305",
-  "getUserAccountData: supplies: 2, borrows: 1 with eMode enabled": "121497"
+  "getUserAccountData: supplies: 1, borrows: 0": "57884",
+  "getUserAccountData: supplies: 1, borrows: 0 with eMode enabled": "60634",
+  "getUserAccountData: supplies: 2, borrows: 0": "86790",
+  "getUserAccountData: supplies: 2, borrows: 0 with eMode enabled": "90289",
+  "getUserAccountData: supplies: 2, borrows: 1": "117914",
+  "getUserAccountData: supplies: 2, borrows: 1 with eMode enabled": "121413"
 }
