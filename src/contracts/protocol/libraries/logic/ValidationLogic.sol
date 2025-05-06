@@ -444,8 +444,8 @@ library ValidationLogic {
     uint8 userEModeCategory,
     uint256 reservesCount,
     address oracle
-  ) internal view returns (uint256, bool) {
-    (, , , , uint256 healthFactor, bool hasZeroLtvCollateral) = GenericLogic
+  ) internal view returns (uint256 healthFactor, bool hasZeroLtvCollateral) {
+    (, , , , healthFactor, hasZeroLtvCollateral) = GenericLogic
       .calculateUserAccountData(
         reservesData,
         reservesList,
@@ -463,8 +463,6 @@ library ValidationLogic {
       healthFactor >= HEALTH_FACTOR_LIQUIDATION_THRESHOLD,
       Errors.HEALTH_FACTOR_LOWER_THAN_LIQUIDATION_THRESHOLD
     );
-
-    return (healthFactor, hasZeroLtvCollateral);
   }
 
   /**
