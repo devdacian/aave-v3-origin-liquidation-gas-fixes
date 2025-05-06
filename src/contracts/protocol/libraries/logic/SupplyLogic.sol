@@ -101,7 +101,7 @@ library SupplyLogic {
    * @param eModeCategories The configuration of all the efficiency mode categories
    * @param userConfig The user configuration mapping that tracks the supplied/borrowed assets
    * @param params The additional parameters needed to execute the withdraw function
-   * @return The actual amount withdrawn
+   * @return amountToWithdraw The actual amount withdrawn
    */
   function executeWithdraw(
     mapping(address => DataTypes.ReserveData) storage reservesData,
@@ -109,7 +109,7 @@ library SupplyLogic {
     mapping(uint8 => DataTypes.EModeCategory) storage eModeCategories,
     DataTypes.UserConfigurationMap storage userConfig,
     DataTypes.ExecuteWithdrawParams memory params
-  ) external returns (uint256) {
+  ) external returns (uint256 amountToWithdraw) {
     DataTypes.ReserveData storage reserve = reservesData[params.asset];
     DataTypes.ReserveCache memory reserveCache = reserve.cache();
 
@@ -121,7 +121,7 @@ library SupplyLogic {
       reserveCache.nextLiquidityIndex
     );
 
-    uint256 amountToWithdraw = params.amount;
+    amountToWithdraw = params.amount;
 
     if (params.amount == type(uint256).max) {
       amountToWithdraw = userBalance;
@@ -131,10 +131,15 @@ library SupplyLogic {
 
     reserve.updateInterestRatesAndVirtualBalance(reserveCache, params.asset, 0, amountToWithdraw);
 
-    bool isCollateral = userConfig.isUsingAsCollateral(reserve.id);
+    // read user's configuration once from storage; this cached copy will be used
+    // and updated by all withdraw operations, then written to storage once at
+    // the end ensuring only 1 read/write from/to storage
+    DataTypes.UserConfigurationMap memory userConfigCache = userConfig;
+
+    bool isCollateral = userConfigCache.isUsingAsCollateral(reserve.id);
 
     if (isCollateral && amountToWithdraw == userBalance) {
-      userConfig.setUsingAsCollateral(reserve.id, false);
+      userConfigCache.setUsingAsCollateralInMemory(reserve.id, false);
       emit ReserveUsedAsCollateralDisabled(params.asset, msg.sender);
     }
 
@@ -145,12 +150,12 @@ library SupplyLogic {
       reserveCache.nextLiquidityIndex
     );
 
-    if (isCollateral && userConfig.isBorrowingAny()) {
+    if (isCollateral && userConfigCache.isBorrowingAny()) {
       ValidationLogic.validateHFAndLtv(
         reservesData,
         reservesList,
         eModeCategories,
-        userConfig,
+        userConfigCache,
         params.asset,
         msg.sender,
         params.reservesCount,
@@ -161,7 +166,10 @@ library SupplyLogic {
 
     emit Withdraw(params.asset, msg.sender, params.to, amountToWithdraw);
 
-    return amountToWithdraw;
+    // update user's configuration from cache; but only if it was modified
+    if (isCollateral && amountToWithdraw == userBalance) {
+      userConfig.data = userConfigCache.data;
+    }
   }
 
   /**

@@ -18,8 +18,8 @@
   "repay: partial repay with ATokens": "184775",
   "supply: collateralDisabled": "146423",
   "supply: collateralEnabled": "146423",
-  "supply: first supply->collateralEnabled": "175868",
-  "withdraw: full withdraw": "164894",
-  "withdraw: partial withdraw": "181583",
-  "withdraw: partial withdraw with active borrows": "238208"
+  "supply: first supply->collateralEnabled": "175872",
+  "withdraw: full withdraw": "164728",
+  "withdraw: partial withdraw": "181499",
+  "withdraw: partial withdraw with active borrows": "237972"
 }
