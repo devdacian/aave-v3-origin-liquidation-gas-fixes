@@ -344,36 +344,32 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     uint256 userBalance,
     uint256 totalSupply
   ) internal {
-    uint256 assetUnit;
     uint256 numAvailableRewards = _assets[asset].availableRewardsCount;
-    unchecked {
-      assetUnit = 10 ** _assets[asset].decimals;
-    }
+    if (numAvailableRewards != 0) {
+      unchecked {
+        uint256 assetUnit = 10 ** _assets[asset].decimals;
 
-    if (numAvailableRewards == 0) {
-      return;
-    }
-    unchecked {
-      for (uint128 r; r < numAvailableRewards; r++) {
-        address reward = _assets[asset].availableRewards[r];
-        RewardsDataTypes.RewardData storage rewardData = _assets[asset].rewards[reward];
+        for (uint128 r; r < numAvailableRewards; r++) {
+          address reward = _assets[asset].availableRewards[r];
+          RewardsDataTypes.RewardData storage rewardData = _assets[asset].rewards[reward];
 
-        (uint256 newAssetIndex, bool rewardDataUpdated) = _updateRewardData(
-          rewardData,
-          totalSupply,
-          assetUnit
-        );
+          (uint256 newAssetIndex, bool rewardDataUpdated) = _updateRewardData(
+            rewardData,
+            totalSupply,
+            assetUnit
+          );
 
-        (uint256 rewardsAccrued, bool userDataUpdated) = _updateUserData(
-          rewardData,
-          user,
-          userBalance,
-          newAssetIndex,
-          assetUnit
-        );
+          (uint256 rewardsAccrued, bool userDataUpdated) = _updateUserData(
+            rewardData,
+            user,
+            userBalance,
+            newAssetIndex,
+            assetUnit
+          );
 
-        if (rewardDataUpdated || userDataUpdated) {
-          emit Accrued(asset, reward, user, newAssetIndex, newAssetIndex, rewardsAccrued);
+          if (rewardDataUpdated || userDataUpdated) {
+            emit Accrued(asset, reward, user, newAssetIndex, newAssetIndex, rewardsAccrued);
+          }
         }
       }
     }
