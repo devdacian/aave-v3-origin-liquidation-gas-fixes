@@ -159,22 +159,14 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
     return stopTime - startTime;
   }
 
-  struct BalanceOfLocalVars {
-    uint256 recipientBalance;
-    uint256 withdrawalAmount;
-    uint256 senderBalance;
-  }
-
   /// @inheritdoc ICollector
   function balanceOf(
     uint256 streamId,
     address who
   ) public view streamExists(streamId) returns (uint256 balance) {
     Stream memory stream = _streams[streamId];
-    BalanceOfLocalVars memory vars;
 
-    uint256 delta = deltaOf(streamId);
-    vars.recipientBalance = delta * stream.ratePerSecond;
+    uint256 recipientBalance = deltaOf(streamId) * stream.ratePerSecond;
 
     /*
      * If the stream `balance` does not equal `deposit`, it means there have been withdrawals.
@@ -182,16 +174,12 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
      * streamed until now.
      */
     if (stream.deposit > stream.remainingBalance) {
-      vars.withdrawalAmount = stream.deposit - stream.remainingBalance;
-      vars.recipientBalance = vars.recipientBalance - vars.withdrawalAmount;
+      uint256 withdrawalAmount = stream.deposit - stream.remainingBalance;
+      recipientBalance = recipientBalance - withdrawalAmount;
     }
 
-    if (who == stream.recipient) return vars.recipientBalance;
-    if (who == stream.sender) {
-      vars.senderBalance = stream.remainingBalance - vars.recipientBalance;
-      return vars.senderBalance;
-    }
-    return 0;
+    if (who == stream.recipient) balance = recipientBalance;
+    else if (who == stream.sender) balance = stream.remainingBalance - recipientBalance;
   }
 
   /*** Public Effects & Interactions Functions ***/

@@ -1,8 +1,8 @@
 {
-  "cancelStream: by funds admin": "16710",
-  "cancelStream: by recipient": "47635",
+  "cancelStream: by funds admin": "16483",
+  "cancelStream: by recipient": "47407",
   "createStream": "211600",
   "getStream": "2380",
-  "withdrawFromStream: final withdraw": "42656",
-  "withdrawFromStream: intermediate withdraw": "41326"
+  "withdrawFromStream: final withdraw": "42560",
+  "withdrawFromStream: intermediate withdraw": "41230"
 }
