@@ -157,6 +157,7 @@ contract RewardsControllerTest is TestnetProcedures {
 
     vm.prank(alice);
     manager.setEmissionPerSecond(usdxAToken, rewards, emissions);
+    vm.snapshotGasLastCall('RewardsController', 'setEmissionPerSecond: one reward one emission');
   }
 
   function test_configureAssets() public {
