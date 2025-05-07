@@ -104,13 +104,10 @@ abstract contract RewardsDistributor is IRewardsDistributor {
   function getUserAccruedRewards(
     address user,
     address reward
-  ) external view override returns (uint256) {
-    uint256 totalAccrued;
+  ) external view override returns (uint256 totalAccrued) {
     for (uint256 i; i < _assetsList.length; i++) {
       totalAccrued += _assets[_assetsList[i]].rewards[reward].usersData[user].accrued;
     }
-
-    return totalAccrued;
   }
 
   /// @inheritdoc IRewardsDistributor
