@@ -161,17 +161,22 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     address reward,
     uint32 newDistributionEnd
   ) external override onlyEmissionManager {
-    uint256 oldDistributionEnd = _assets[asset].rewards[reward].distributionEnd;
+    // cache event emission params using 1 SLOAD
+    (uint104 index, uint88 emissionPerSecond, uint32 oldDistributionEnd)
+      = (_assets[asset].rewards[reward].index,
+         _assets[asset].rewards[reward].emissionPerSecond,
+         _assets[asset].rewards[reward].distributionEnd);
+
     _assets[asset].rewards[reward].distributionEnd = newDistributionEnd;
 
     emit AssetConfigUpdated(
       asset,
       reward,
-      _assets[asset].rewards[reward].emissionPerSecond,
-      _assets[asset].rewards[reward].emissionPerSecond,
+      emissionPerSecond,
+      emissionPerSecond,
       oldDistributionEnd,
       newDistributionEnd,
-      _assets[asset].rewards[reward].index
+      index
     );
   }
 
