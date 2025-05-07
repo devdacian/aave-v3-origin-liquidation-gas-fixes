@@ -144,6 +144,7 @@ contract StreamsTest is CollectorTest {
 
     vm.startPrank(FUNDS_ADMIN);
     uint256 streamId = createStream();
+    vm.snapshotGasLastCall('Collector', 'createStream');
 
     assertEq(streamId, nextStreamID);
 
@@ -157,6 +158,7 @@ contract StreamsTest is CollectorTest {
       uint256 remainingBalance,
 
     ) = collector.getStream(streamId);
+    vm.snapshotGasLastCall('Collector', 'getStream');
 
     assertEq(sender, address(collector));
     assertEq(recipient, RECIPIENT_STREAM_1);
@@ -274,6 +276,7 @@ contract StreamsTest is CollectorTest {
     vm.prank(RECIPIENT_STREAM_1);
     // Act
     collector.withdrawFromStream(streamId, 1 ether);
+    vm.snapshotGasLastCall('Collector', 'withdrawFromStream: intermediate withdraw');
 
     // Assert
     uint256 balanceRecipientAfter = tokenA.balanceOf(RECIPIENT_STREAM_1);
@@ -304,6 +307,7 @@ contract StreamsTest is CollectorTest {
     vm.prank(RECIPIENT_STREAM_1);
     // Act
     collector.withdrawFromStream(streamId, 6 ether);
+    vm.snapshotGasLastCall('Collector', 'withdrawFromStream: final withdraw');
 
     // Assert
     uint256 balanceRecipientAfter = tokenA.balanceOf(RECIPIENT_STREAM_1);
@@ -369,6 +373,7 @@ contract StreamsTest is CollectorTest {
     vm.prank(FUNDS_ADMIN);
     // Act
     collector.cancelStream(streamId);
+    vm.snapshotGasLastCall('Collector', 'cancelStream: by funds admin');
 
     // Assert
     uint256 balanceRecipientAfter = tokenA.balanceOf(RECIPIENT_STREAM_1);
@@ -392,6 +397,7 @@ contract StreamsTest is CollectorTest {
     vm.prank(RECIPIENT_STREAM_1);
     // Act
     collector.cancelStream(streamId);
+    vm.snapshotGasLastCall('Collector', 'cancelStream: by recipient');
 
     // Assert
     uint256 balanceRecipientAfter = tokenA.balanceOf(RECIPIENT_STREAM_1);
