@@ -149,7 +149,7 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
     address to
   ) external override returns (address[] memory rewardsList, uint256[] memory claimedAmounts) {
     require(to != address(0), 'INVALID_TO_ADDRESS');
-    return _claimAllRewards(assets, msg.sender, msg.sender, to);
+    (rewardsList, claimedAmounts) = _claimAllRewards(assets, msg.sender, msg.sender, to);
   }
 
   /// @inheritdoc IRewardsController
@@ -165,14 +165,14 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
   {
     require(user != address(0), 'INVALID_USER_ADDRESS');
     require(to != address(0), 'INVALID_TO_ADDRESS');
-    return _claimAllRewards(assets, msg.sender, user, to);
+    (rewardsList, claimedAmounts) = _claimAllRewards(assets, msg.sender, user, to);
   }
 
   /// @inheritdoc IRewardsController
   function claimAllRewardsToSelf(
     address[] calldata assets
   ) external override returns (address[] memory rewardsList, uint256[] memory claimedAmounts) {
-    return _claimAllRewards(assets, msg.sender, msg.sender, msg.sender);
+    (rewardsList, claimedAmounts) = _claimAllRewards(assets, msg.sender, msg.sender, msg.sender);
   }
 
   /// @inheritdoc IRewardsController
@@ -198,7 +198,6 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
         assets[i]
       ).getScaledUserBalanceAndSupply(user);
     }
-    return userAssetBalances;
   }
 
   /**
@@ -209,7 +208,7 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
    * @param user Address to check and claim rewards
    * @param to Address that will be receiving the rewards
    * @param reward Address of the reward token
-   * @return Rewards claimed
+   * @return totalRewards Rewards claimed
    **/
   function _claimRewards(
     address[] calldata assets,
@@ -218,35 +217,28 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
     address user,
     address to,
     address reward
-  ) internal returns (uint256) {
-    if (amount == 0) {
-      return 0;
-    }
-    uint256 totalRewards;
+  ) internal returns (uint256 totalRewards) {
+    if (amount != 0) {
+      _updateDataMultiple(user, _getUserAssetBalances(assets, user));
+      for (uint256 i = 0; i < assets.length; i++) {
+        address asset = assets[i];
+        totalRewards += _assets[asset].rewards[reward].usersData[user].accrued;
 
-    _updateDataMultiple(user, _getUserAssetBalances(assets, user));
-    for (uint256 i = 0; i < assets.length; i++) {
-      address asset = assets[i];
-      totalRewards += _assets[asset].rewards[reward].usersData[user].accrued;
+        if (totalRewards <= amount) {
+          _assets[asset].rewards[reward].usersData[user].accrued = 0;
+        } else {
+          uint256 difference = totalRewards - amount;
+          totalRewards -= difference;
+          _assets[asset].rewards[reward].usersData[user].accrued = difference.toUint128();
+          break;
+        }
+      }
 
-      if (totalRewards <= amount) {
-        _assets[asset].rewards[reward].usersData[user].accrued = 0;
-      } else {
-        uint256 difference = totalRewards - amount;
-        totalRewards -= difference;
-        _assets[asset].rewards[reward].usersData[user].accrued = difference.toUint128();
-        break;
+      if (totalRewards != 0) {
+        _transferRewards(to, reward, totalRewards);
+        emit RewardsClaimed(user, reward, to, claimer, totalRewards);
       }
     }
-
-    if (totalRewards == 0) {
-      return 0;
-    }
-
-    _transferRewards(to, reward, totalRewards);
-    emit RewardsClaimed(user, reward, to, claimer, totalRewards);
-
-    return totalRewards;
   }
 
   /**
@@ -288,7 +280,6 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
       _transferRewards(to, rewardsList[i], claimedAmounts[i]);
       emit RewardsClaimed(user, rewardsList[i], to, claimer, claimedAmounts[i]);
     }
-    return (rewardsList, claimedAmounts);
   }
 
   /**

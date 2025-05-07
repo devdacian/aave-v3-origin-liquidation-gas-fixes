@@ -77,19 +77,18 @@ abstract contract RewardsDistributor is IRewardsDistributor {
   }
 
   /// @inheritdoc IRewardsDistributor
-  function getRewardsByAsset(address asset) external view override returns (address[] memory) {
+  function getRewardsByAsset(address asset) external view override returns (address[] memory availableRewards) {
     uint128 rewardsCount = _assets[asset].availableRewardsCount;
-    address[] memory availableRewards = new address[](rewardsCount);
+    availableRewards = new address[](rewardsCount);
 
     for (uint128 i = 0; i < rewardsCount; i++) {
       availableRewards[i] = _assets[asset].availableRewards[i];
     }
-    return availableRewards;
   }
 
   /// @inheritdoc IRewardsDistributor
-  function getRewardsList() external view override returns (address[] memory) {
-    return _rewardsList;
+  function getRewardsList() external view override returns (address[] memory rewardsList) {
+    rewardsList = _rewardsList;
   }
 
   /// @inheritdoc IRewardsDistributor
@@ -155,7 +154,6 @@ abstract contract RewardsDistributor is IRewardsDistributor {
         unclaimedAmounts[r] += _getPendingRewards(user, rewardsList[r], userAssetBalances[i]);
       }
     }
-    return (rewardsList, unclaimedAmounts);
   }
 
   /// @inheritdoc IRewardsDistributor
@@ -278,28 +276,25 @@ abstract contract RewardsDistributor is IRewardsDistributor {
    * @param rewardData Storage pointer to the distribution reward config
    * @param totalSupply Current total of underlying assets for this distribution
    * @param assetUnit One unit of asset (10**decimals)
-   * @return The new distribution index
-   * @return True if the index was updated, false otherwise
+   * @return newIndex The new distribution index
+   * @return indexUpdated True if the index was updated, false otherwise
    **/
   function _updateRewardData(
     RewardsDataTypes.RewardData storage rewardData,
     uint256 totalSupply,
     uint256 assetUnit
-  ) internal returns (uint256, bool) {
-    (uint256 oldIndex, uint256 newIndex) = _getAssetIndex(rewardData, totalSupply, assetUnit);
-    bool indexUpdated;
+  ) internal returns (uint256 newIndex, bool indexUpdated) {
+    uint256 oldIndex;
+    (oldIndex, newIndex) = _getAssetIndex(rewardData, totalSupply, assetUnit);
     if (newIndex != oldIndex) {
       require(newIndex <= type(uint104).max, 'INDEX_OVERFLOW');
       indexUpdated = true;
 
       //optimization: storing one after another saves one SSTORE
       rewardData.index = uint104(newIndex);
-      rewardData.lastUpdateTimestamp = block.timestamp.toUint32();
-    } else {
-      rewardData.lastUpdateTimestamp = block.timestamp.toUint32();
-    }
+    } 
 
-    return (newIndex, indexUpdated);
+    rewardData.lastUpdateTimestamp = block.timestamp.toUint32();
   }
 
   /**
@@ -309,7 +304,7 @@ abstract contract RewardsDistributor is IRewardsDistributor {
    * @param userBalance The user balance of the asset
    * @param newAssetIndex The new index of the asset distribution
    * @param assetUnit One unit of asset (10**decimals)
-   * @return The rewards accrued since the last update
+   * @return rewardsAccrued The rewards accrued since the last update
    **/
   function _updateUserData(
     RewardsDataTypes.RewardData storage rewardData,
@@ -317,10 +312,9 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     uint256 userBalance,
     uint256 newAssetIndex,
     uint256 assetUnit
-  ) internal returns (uint256, bool) {
+  ) internal returns (uint256 rewardsAccrued, bool dataUpdated) {
     uint256 userIndex = rewardData.usersData[user].index;
-    uint256 rewardsAccrued;
-    bool dataUpdated;
+
     if ((dataUpdated = userIndex != newAssetIndex)) {
       // already checked for overflow in _updateRewardData
       rewardData.usersData[user].index = uint104(newAssetIndex);
@@ -330,7 +324,6 @@ abstract contract RewardsDistributor is IRewardsDistributor {
         rewardData.usersData[user].accrued += rewardsAccrued.toUint128();
       }
     }
-    return (rewardsAccrued, dataUpdated);
   }
 
   /**
@@ -425,8 +418,6 @@ abstract contract RewardsDistributor is IRewardsDistributor {
           _assets[userAssetBalances[i].asset].rewards[reward].usersData[user].accrued;
       }
     }
-
-    return unclaimedRewards;
   }
 
   /**
@@ -462,19 +453,18 @@ abstract contract RewardsDistributor is IRewardsDistributor {
    * @param reserveIndex Current index of the distribution
    * @param userIndex Index stored for the user, representation his staking moment
    * @param assetUnit One unit of asset (10**decimals)
-   * @return The rewards
+   * @return result The rewards
    **/
   function _getRewards(
     uint256 userBalance,
     uint256 reserveIndex,
     uint256 userIndex,
     uint256 assetUnit
-  ) internal pure returns (uint256) {
-    uint256 result = userBalance * (reserveIndex - userIndex);
+  ) internal pure returns (uint256 result) {
+    result = userBalance * (reserveIndex - userIndex);
     assembly {
       result := div(result, assetUnit)
     }
-    return result;
   }
 
   /**
