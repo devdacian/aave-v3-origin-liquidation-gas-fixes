@@ -241,9 +241,8 @@ abstract contract RewardsDistributor is IRewardsDistributor {
       // Add reward address to asset available rewards if latestUpdateTimestamp is zero
       if (rewardConfig.lastUpdateTimestamp == 0) {
         _assets[rewardsInput[i].asset].availableRewards[
-          _assets[rewardsInput[i].asset].availableRewardsCount
+          _assets[rewardsInput[i].asset].availableRewardsCount++
         ] = rewardsInput[i].reward;
-        _assets[rewardsInput[i].asset].availableRewardsCount++;
       }
 
       // Add reward address to global rewards list if still not enabled
