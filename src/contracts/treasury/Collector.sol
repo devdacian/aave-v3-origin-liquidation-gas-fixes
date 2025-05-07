@@ -204,11 +204,6 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
     return hasRole(FUNDS_ADMIN_ROLE, msg.sender);
   }
 
-  struct CreateStreamLocalVars {
-    uint256 duration;
-    uint256 ratePerSecond;
-  }
-
   /// @inheritdoc ICollector
   /**
    * @dev Throws if the recipient is the zero address, the contract itself or the caller.
@@ -237,16 +232,15 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
     if (startTime < block.timestamp) revert InvalidStartTime();
     if (stopTime <= startTime) revert InvalidStopTime();
 
-    CreateStreamLocalVars memory vars;
-    vars.duration = stopTime - startTime;
+    uint256 duration = stopTime - startTime;
 
     /* Without this, the rate per second would be zero. */
-    if (deposit < vars.duration) revert DepositSmallerTimeDelta();
+    if (deposit < duration) revert DepositSmallerTimeDelta();
 
     /* This condition avoids dealing with remainders */
-    if (deposit % vars.duration > 0) revert DepositNotMultipleTimeDelta();
+    if (deposit % duration > 0) revert DepositNotMultipleTimeDelta();
 
-    vars.ratePerSecond = deposit / vars.duration;
+    uint256 ratePerSecond = deposit / duration;
 
     /* Create and store the stream object. */
     streamId = _nextStreamId++;
@@ -254,7 +248,7 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
       remainingBalance: deposit,
       deposit: deposit,
       isEntity: true,
-      ratePerSecond: vars.ratePerSecond,
+      ratePerSecond: ratePerSecond,
       recipient: recipient,
       sender: address(this),
       startTime: startTime,
