@@ -105,7 +105,8 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     address user,
     address reward
   ) external view override returns (uint256 totalAccrued) {
-    for (uint256 i; i < _assetsList.length; i++) {
+    uint256 assetsListLength = _assetsList.length;
+    for (uint256 i; i < assetsListLength; i++) {
       totalAccrued += _assets[_assetsList[i]].rewards[reward].usersData[user].accrued;
     }
   }
@@ -133,12 +134,13 @@ abstract contract RewardsDistributor is IRewardsDistributor {
       assets,
       user
     );
-    rewardsList = new address[](_rewardsList.length);
-    unclaimedAmounts = new uint256[](rewardsList.length);
+    uint256 rewardsListLength = _rewardsList.length;
+    rewardsList = new address[](rewardsListLength);
+    unclaimedAmounts = new uint256[](rewardsListLength);
 
     // Add unrealized rewards from user to unclaimedRewards
     for (uint256 i; i < userAssetBalances.length; i++) {
-      for (uint256 r; r < rewardsList.length; r++) {
+      for (uint256 r; r < rewardsListLength; r++) {
         rewardsList[r] = _rewardsList[r];
         unclaimedAmounts[r] += _assets[userAssetBalances[i].asset]
           .rewards[rewardsList[r]]
