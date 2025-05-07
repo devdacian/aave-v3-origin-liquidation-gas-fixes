@@ -81,7 +81,7 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     uint128 rewardsCount = _assets[asset].availableRewardsCount;
     availableRewards = new address[](rewardsCount);
 
-    for (uint128 i = 0; i < rewardsCount; i++) {
+    for (uint128 i; i < rewardsCount; i++) {
       availableRewards[i] = _assets[asset].availableRewards[i];
     }
   }
@@ -106,7 +106,7 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     address reward
   ) external view override returns (uint256) {
     uint256 totalAccrued;
-    for (uint256 i = 0; i < _assetsList.length; i++) {
+    for (uint256 i; i < _assetsList.length; i++) {
       totalAccrued += _assets[_assetsList[i]].rewards[reward].usersData[user].accrued;
     }
 
@@ -140,8 +140,8 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     unclaimedAmounts = new uint256[](rewardsList.length);
 
     // Add unrealized rewards from user to unclaimedRewards
-    for (uint256 i = 0; i < userAssetBalances.length; i++) {
-      for (uint256 r = 0; r < rewardsList.length; r++) {
+    for (uint256 i; i < userAssetBalances.length; i++) {
+      for (uint256 r; r < rewardsList.length; r++) {
         rewardsList[r] = _rewardsList[r];
         unclaimedAmounts[r] += _assets[userAssetBalances[i].asset]
           .rewards[rewardsList[r]]
@@ -183,7 +183,7 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     uint88[] calldata newEmissionsPerSecond
   ) external override onlyEmissionManager {
     require(rewards.length == newEmissionsPerSecond.length, 'INVALID_INPUT');
-    for (uint256 i = 0; i < rewards.length; i++) {
+    for (uint256 i; i < rewards.length; i++) {
       RewardsDataTypes.AssetData storage assetConfig = _assets[asset];
       RewardsDataTypes.RewardData storage rewardConfig = _assets[asset].rewards[rewards[i]];
       uint256 decimals = assetConfig.decimals;
@@ -218,7 +218,7 @@ abstract contract RewardsDistributor is IRewardsDistributor {
    * @param rewardsInput The array of each asset configuration
    **/
   function _configureAssets(RewardsDataTypes.RewardsConfigInput[] memory rewardsInput) internal {
-    for (uint256 i = 0; i < rewardsInput.length; i++) {
+    for (uint256 i; i < rewardsInput.length; i++) {
       if (_assets[rewardsInput[i].asset].decimals == 0) {
         //never initialized before, adding to the list of assets
         _assetsList.push(rewardsInput[i].asset);
@@ -349,7 +349,7 @@ abstract contract RewardsDistributor is IRewardsDistributor {
       return;
     }
     unchecked {
-      for (uint128 r = 0; r < numAvailableRewards; r++) {
+      for (uint128 r; r < numAvailableRewards; r++) {
         address reward = _assets[asset].availableRewards[r];
         RewardsDataTypes.RewardData storage rewardData = _assets[asset].rewards[reward];
 
@@ -383,7 +383,7 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     address user,
     RewardsDataTypes.UserAssetBalance[] memory userAssetBalances
   ) internal {
-    for (uint256 i = 0; i < userAssetBalances.length; i++) {
+    for (uint256 i; i < userAssetBalances.length; i++) {
       _updateData(
         userAssetBalances[i].asset,
         user,
@@ -406,7 +406,7 @@ abstract contract RewardsDistributor is IRewardsDistributor {
     RewardsDataTypes.UserAssetBalance[] memory userAssetBalances
   ) internal view returns (uint256 unclaimedRewards) {
     // Add unrealized rewards
-    for (uint256 i = 0; i < userAssetBalances.length; i++) {
+    for (uint256 i; i < userAssetBalances.length; i++) {
       if (userAssetBalances[i].userBalance == 0) {
         unclaimedRewards += _assets[userAssetBalances[i].asset]
           .rewards[reward]

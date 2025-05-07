@@ -76,7 +76,7 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
   function configureAssets(
     RewardsDataTypes.RewardsConfigInput[] memory config
   ) external override onlyEmissionManager {
-    for (uint256 i = 0; i < config.length; i++) {
+    for (uint256 i; i < config.length; i++) {
       // Get the current Scaled Total Supply of AToken or Debt token
       config[i].totalSupply = IScaledBalanceToken(config[i].asset).scaledTotalSupply();
 
@@ -192,7 +192,7 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
     address user
   ) internal view override returns (RewardsDataTypes.UserAssetBalance[] memory userAssetBalances) {
     userAssetBalances = new RewardsDataTypes.UserAssetBalance[](assets.length);
-    for (uint256 i = 0; i < assets.length; i++) {
+    for (uint256 i; i < assets.length; i++) {
       userAssetBalances[i].asset = assets[i];
       (userAssetBalances[i].userBalance, userAssetBalances[i].totalSupply) = IScaledBalanceToken(
         assets[i]
@@ -220,7 +220,7 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
   ) internal returns (uint256 totalRewards) {
     if (amount != 0) {
       _updateDataMultiple(user, _getUserAssetBalances(assets, user));
-      for (uint256 i = 0; i < assets.length; i++) {
+      for (uint256 i; i < assets.length; i++) {
         address asset = assets[i];
         totalRewards += _assets[asset].rewards[reward].usersData[user].accrued;
 
@@ -263,9 +263,9 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
 
     _updateDataMultiple(user, _getUserAssetBalances(assets, user));
 
-    for (uint256 i = 0; i < assets.length; i++) {
+    for (uint256 i; i < assets.length; i++) {
       address asset = assets[i];
-      for (uint256 j = 0; j < rewardsListLength; j++) {
+      for (uint256 j; j < rewardsListLength; j++) {
         if (rewardsList[j] == address(0)) {
           rewardsList[j] = _rewardsList[j];
         }
@@ -276,7 +276,7 @@ contract RewardsController is RewardsDistributor, VersionedInitializable, IRewar
         }
       }
     }
-    for (uint256 i = 0; i < rewardsListLength; i++) {
+    for (uint256 i; i < rewardsListLength; i++) {
       _transferRewards(to, rewardsList[i], claimedAmounts[i]);
       emit RewardsClaimed(user, rewardsList[i], to, claimer, claimedAmounts[i]);
     }
