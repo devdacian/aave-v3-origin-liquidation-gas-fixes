@@ -238,7 +238,7 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
     address tokenAddress,
     uint256 startTime,
     uint256 stopTime
-  ) external onlyFundsAdmin returns (uint256) {
+  ) external onlyFundsAdmin returns (uint256 streamId) {
     if (recipient == address(0)) revert InvalidZeroAddress();
     if (recipient == address(this)) revert InvalidRecipient();
     if (recipient == msg.sender) revert InvalidRecipient();
@@ -258,7 +258,7 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
     vars.ratePerSecond = deposit / vars.duration;
 
     /* Create and store the stream object. */
-    uint256 streamId = _nextStreamId;
+    streamId = _nextStreamId++;
     _streams[streamId] = Stream({
       remainingBalance: deposit,
       deposit: deposit,
@@ -271,9 +271,6 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
       tokenAddress: tokenAddress
     });
 
-    /* Increment the next stream id. */
-    _nextStreamId++;
-
     emit CreateStream(
       streamId,
       address(this),
@@ -283,7 +280,6 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
       startTime,
       stopTime
     );
-    return streamId;
   }
 
   /// @inheritdoc ICollector
