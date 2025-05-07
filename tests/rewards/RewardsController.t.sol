@@ -194,6 +194,7 @@ contract RewardsControllerTest is TestnetProcedures {
 
     vm.prank(alice);
     manager.configureAssets(config);
+    vm.snapshotGasLastCall('RewardsController', 'configureAssets: one reward type');
 
     assertEq((rewardsController.getRewardsList()).length, 1);
     assertEq((rewardsController.getRewardsList())[0], tokenList.usdx);
@@ -228,6 +229,7 @@ contract RewardsControllerTest is TestnetProcedures {
 
     vm.prank(alice);
     rewardsController.claimRewards(assets, totalRewards, alice, tokenList.usdx);
+    vm.snapshotGasLastCall('RewardsController', 'claimRewards: one reward type');
     assertEq(IERC20(tokenList.usdx).balanceOf(alice), aliceBalance + totalRewards);
   }
 
@@ -250,6 +252,7 @@ contract RewardsControllerTest is TestnetProcedures {
 
     vm.prank(alice);
     rewardsController.claimRewards(assets, claimAmount, alice, tokenList.usdx);
+    vm.snapshotGasLastCall('RewardsController', 'claimRewards partial: one reward type');
     assertEq(IERC20(tokenList.usdx).balanceOf(alice), aliceBalance + claimAmount);
   }
 
@@ -320,6 +323,7 @@ contract RewardsControllerTest is TestnetProcedures {
 
     vm.prank(alice);
     rewardsController.claimAllRewards(assets, alice);
+    vm.snapshotGasLastCall('RewardsController', 'claimAllRewards: one reward type');
     assertEq(IERC20(tokenList.usdx).balanceOf(alice), aliceBalance + totalRewards);
   }
 
@@ -340,6 +344,7 @@ contract RewardsControllerTest is TestnetProcedures {
 
     vm.prank(alice);
     rewardsController.claimAllRewardsToSelf(assets);
+    vm.snapshotGasLastCall('RewardsController', 'claimAllRewardsToSelf: one reward type');
     assertEq(IERC20(tokenList.usdx).balanceOf(alice), aliceBalance + totalRewards);
   }
 
@@ -420,6 +425,7 @@ contract RewardsControllerTest is TestnetProcedures {
     contracts.poolProxy.supply(tokenList.usdx, 100e6, alice, 0);
 
     uint256 accrued = rewardsController.getUserAccruedRewards(alice, tokenList.usdx);
+    vm.snapshotGasLastCall('RewardsController', 'getUserAccruedRewards: one reward type');
     assertEq(accrued, expectedRewardsAccrued);
     assertEq(accrued, unclaimedRewards[0]);
     assertEq(accrued, userUnclaimedRewards);
