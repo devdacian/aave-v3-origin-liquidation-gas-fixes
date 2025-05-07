@@ -150,10 +150,13 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
    * @notice Returns the time delta in seconds.
    */
   function deltaOf(uint256 streamId) public view streamExists(streamId) returns (uint256 delta) {
-    Stream memory stream = _streams[streamId];
-    if (block.timestamp <= stream.startTime) return 0;
-    if (block.timestamp < stream.stopTime) return block.timestamp - stream.startTime;
-    return stream.stopTime - stream.startTime;
+    Stream storage stream = _streams[streamId];
+
+    (uint256 startTime, uint256 stopTime) = (stream.startTime, stream.stopTime);
+
+    if (block.timestamp <= startTime) return 0;
+    if (block.timestamp < stopTime) return block.timestamp - startTime;
+    return stopTime - startTime;
   }
 
   struct BalanceOfLocalVars {
