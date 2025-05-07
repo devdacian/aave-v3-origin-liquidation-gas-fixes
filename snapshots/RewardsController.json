@@ -4,5 +4,6 @@
   "claimRewards partial: one reward type": "48250",
   "claimRewards: one reward type": "47988",
   "configureAssets: one reward type": "264175",
-  "getUserAccruedRewards: one reward type": "2090"
+  "getUserAccruedRewards: one reward type": "2090",
+  "setDistributionEnd": "5972"
 }

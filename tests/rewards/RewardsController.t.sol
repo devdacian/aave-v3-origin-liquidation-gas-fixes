@@ -128,6 +128,7 @@ contract RewardsControllerTest is TestnetProcedures {
 
     vm.prank(alice);
     manager.setDistributionEnd(usdxAToken, tokenList.usdx, 10);
+    vm.snapshotGasLastCall('RewardsController', 'setDistributionEnd');
 
     assertEq(rewardsController.getDistributionEnd(usdxAToken, tokenList.usdx), 10);
   }
