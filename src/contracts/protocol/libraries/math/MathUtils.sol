@@ -18,19 +18,19 @@ library MathUtils {
    * @dev Function to calculate the interest accumulated using a linear interest rate formula
    * @param rate The interest rate, in ray
    * @param lastUpdateTimestamp The timestamp of the last update of the interest
-   * @return The interest rate linearly accumulated during the timeDelta, in ray
+   * @return result The interest rate linearly accumulated during the timeDelta, in ray
    */
   function calculateLinearInterest(
     uint256 rate,
     uint40 lastUpdateTimestamp
-  ) internal view returns (uint256) {
+  ) internal view returns (uint256 result) {
     //solium-disable-next-line
-    uint256 result = rate * (block.timestamp - uint256(lastUpdateTimestamp));
+    result = rate * (block.timestamp - uint256(lastUpdateTimestamp));
     unchecked {
       result = result / SECONDS_PER_YEAR;
     }
 
-    return WadRayMath.RAY + result;
+    result += WadRayMath.RAY;
   }
 
   /**
