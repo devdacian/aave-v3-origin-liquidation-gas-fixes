@@ -64,17 +64,6 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
   }
 
   /**
-   * @dev Throws if the caller is not the funds admin of the recipient of the stream.
-   * @param streamId The id of the stream to query.
-   */
-  modifier onlyAdminOrRecipient(uint256 streamId) {
-    if (_onlyFundsAdmin() == false && msg.sender != _streams[streamId].recipient) {
-      revert OnlyFundsAdminOrRecipient();
-    }
-    _;
-  }
-
-  /**
    * @dev Throws if the provided id does not point to a valid stream.
    */
   modifier streamExists(uint256 streamId) {
@@ -204,6 +193,17 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
     return hasRole(FUNDS_ADMIN_ROLE, msg.sender);
   }
 
+  /**
+   * @dev Throws if the caller is not the funds admin of the recipient of the stream
+   *      Allows more gas-efficient caller functions than using a modifier
+   * @param recipient The stream recipient to match against
+   */
+  function _onlyAdminOrRecipient(address recipient) internal view {
+    if (!_onlyFundsAdmin() && msg.sender != recipient) {
+      revert OnlyFundsAdminOrRecipient();
+    }
+  }
+
   /// @inheritdoc ICollector
   /**
    * @dev Throws if the recipient is the zero address, the contract itself or the caller.
@@ -277,19 +277,25 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
   function withdrawFromStream(
     uint256 streamId,
     uint256 amount
-  ) external nonReentrant streamExists(streamId) onlyAdminOrRecipient(streamId) returns (bool) {
+  ) external nonReentrant streamExists(streamId) returns (bool) {
     if (amount == 0) revert InvalidZeroAmount();
-    Stream memory stream = _streams[streamId];
+    Stream storage stream = _streams[streamId]; 
 
-    uint256 balance = balanceOf(streamId, stream.recipient);
+    address recipient = stream.recipient;
+    _onlyAdminOrRecipient(recipient);
+
+    uint256 balance = balanceOf(streamId, recipient);
     if (balance < amount) revert BalanceExceeded();
 
-    _streams[streamId].remainingBalance = stream.remainingBalance - amount;
+    // cache here as stream could be deleted if 0 remaining balance
+    address tokenAddress = stream.tokenAddress;
 
-    if (_streams[streamId].remainingBalance == 0) delete _streams[streamId];
+    uint256 newBalance = stream.remainingBalance - amount;
+    if(newBalance == 0) delete _streams[streamId];
+    else stream.remainingBalance = newBalance;
 
-    IERC20(stream.tokenAddress).safeTransfer(stream.recipient, amount);
-    emit WithdrawFromStream(streamId, stream.recipient, amount);
+    IERC20(tokenAddress).safeTransfer(recipient, amount);
+    emit WithdrawFromStream(streamId, recipient, amount);
     return true;
   }
 
@@ -301,17 +307,22 @@ contract Collector is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ICol
    */
   function cancelStream(
     uint256 streamId
-  ) external nonReentrant streamExists(streamId) onlyAdminOrRecipient(streamId) returns (bool) {
-    Stream memory stream = _streams[streamId];
-    uint256 senderBalance = balanceOf(streamId, stream.sender);
-    uint256 recipientBalance = balanceOf(streamId, stream.recipient);
+  ) external nonReentrant streamExists(streamId) returns (bool) {
+    Stream storage stream = _streams[streamId];
+
+    address recipient = stream.recipient;
+    _onlyAdminOrRecipient(recipient);
+
+    (address sender, address tokenAddress) = (stream.sender, stream.tokenAddress);
+    uint256 senderBalance = balanceOf(streamId, sender);
+    uint256 recipientBalance = balanceOf(streamId, recipient);
 
     delete _streams[streamId];
 
-    IERC20 token = IERC20(stream.tokenAddress);
-    if (recipientBalance > 0) token.safeTransfer(stream.recipient, recipientBalance);
+    IERC20 token = IERC20(tokenAddress);
+    if (recipientBalance > 0) token.safeTransfer(recipient, recipientBalance);
 
-    emit CancelStream(streamId, stream.sender, stream.recipient, senderBalance, recipientBalance);
+    emit CancelStream(streamId, sender, recipient, senderBalance, recipientBalance);
     return true;
   }
 
